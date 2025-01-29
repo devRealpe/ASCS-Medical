@@ -1,0 +1,5 @@
+Aqui tendremos una carpeta por cada pantalla de nuestra aplicación
+Ejemplo: Home, User, etc.
+
+Para cada pantalla tendremos una carpeta con el archivo y los 
+widgets que se reutilizan especificamente para esa pantalla
