@@ -4,6 +4,8 @@ import '../../pages/result_page/result_page.dart';
 import 'dart:convert';
 
 class FormularioCompletoPage extends StatefulWidget {
+  const FormularioCompletoPage({super.key});
+
   @override
   _FormularioCompletoPageState createState() => _FormularioCompletoPageState();
 }

@@ -6,8 +6,9 @@ class ResultadoPage extends StatelessWidget {
   final String audioFilePath;
   final String jsonString;
 
-  ResultadoPage(
-      {required this.nuevoNombreArchivo,
+  const ResultadoPage(
+      {super.key,
+      required this.nuevoNombreArchivo,
       required this.audioFilePath,
       required this.jsonString});
 
