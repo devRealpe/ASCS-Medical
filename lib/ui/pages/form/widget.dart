@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class AudioFilePicker extends StatefulWidget {
   final Function(String) onFileSelected;
 
-  AudioFilePicker({required this.onFileSelected});
+  const AudioFilePicker({super.key, required this.onFileSelected});
 
   @override
   _AudioFilePickerState createState() => _AudioFilePickerState();

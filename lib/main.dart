@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:app_ascs/ui/pages/form/form.dart';
+import 'package:app_ascs/ui/pages/sign_in/sign_in.dart';
+//import 'package:app_ascs/ui/pages/form/form.dart';
 
 void main() {
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -13,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: FormularioCompletoPage(), // Utiliza el nuevo formulario aquí
+      home: SignInPage2(),
     );
   }
 }
