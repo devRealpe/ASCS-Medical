@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:app_ascs/ui/pages/sign_in/sign_in.dart';
+import 'package:app_ascs/ui/pages/form/form.dart';
 
 void main() {
   runApp(MyApp());
@@ -15,9 +15,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: SignInPage2(),
+      home: FormularioCompletoPage(),
     );
   }
 }
-//nkdos, poetri 
-
+//nkdos, poetri
