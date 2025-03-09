@@ -1,24 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:app_ascs/ui/pages/form/form.dart'; // Asegúrate de que esta importación sea correcta
+import 'package:flutter/material.dart'; // Asegúrate de que esta importación sea correcta
 
 class PersistentBottomBarScaffold extends StatefulWidget {
   /// pass the required items for the tabs and BottomNavigationBar
   final List<PersistentTabItem> items;
 
-  const PersistentBottomBarScaffold({Key? key, required this.items})
-      : super(key: key);
+  const PersistentBottomBarScaffold({super.key, required this.items});
 
   @override
-  _PersistentBottomBarScaffoldState createState() =>
-      _PersistentBottomBarScaffoldState();
+  PersistentBottomBarScaffoldState createState() =>
+      PersistentBottomBarScaffoldState();
 }
 
-class _PersistentBottomBarScaffoldState
+class PersistentBottomBarScaffoldState
     extends State<PersistentBottomBarScaffold> {
   int _selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         /// Check if curent tab can be popped

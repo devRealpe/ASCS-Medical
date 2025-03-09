@@ -48,7 +48,7 @@ class _Logo extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Text(
-            "Welcome to Flutter!",
+            "Bienvenido a la app ascs!",
             textAlign: TextAlign.center,
             style: isSmallScreen
                 ? Theme.of(context).textTheme.headlineSmall
@@ -173,7 +173,7 @@ class __FormContentState extends State<_FormContent> {
                 ),
                 onPressed: () {
                   if (_formKey.currentState?.validate() ?? false) {
-                    if (_emailController.text == 'johanrealpelibro@gmail.com' &&
+                    if (_emailController.text == 'johan@gmail.com' &&
                         _passwordController.text == '123456') {
                       Navigator.push(
                         context,
@@ -189,8 +189,8 @@ class __FormContentState extends State<_FormContent> {
                               ),
                               PersistentTabItem(
                                 tab: Center(child: Text('Business Page')),
-                                title: 'Dashboard',
-                                icon: Icons.dashboard,
+                                title: 'Diagnótico',
+                                icon: Icons.monitor_heart,
                                 navigatorkey: GlobalKey<NavigatorState>(),
                               ),
                               PersistentTabItem(
