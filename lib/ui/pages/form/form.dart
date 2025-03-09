@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 import '../../pages/form/widget.dart';
 import '../../pages/result_page/result_page.dart';
-import 'dart:convert';
 
 class FormularioCompletoPage extends StatefulWidget {
   const FormularioCompletoPage({super.key});
@@ -12,6 +13,19 @@ class FormularioCompletoPage extends StatefulWidget {
 
 class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
+  final Map<String, String> consultorioMap = {
+    '101 A': '01',
+    '102 B': '02',
+    '103 C': '03'
+  };
+  final Map<String, String> hospitalMap = {'Departamental': '01'};
+  final Map<String, String> focoMap = {
+    'Aórtico': '01',
+    'Pulmonar': '02',
+    'Tricuspídeo': '03',
+    'Mitral': '04'
+  };
+
   String? hospital;
   String? consultorio;
   String? estado;
@@ -19,20 +33,88 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   DateTime? selectedDate;
   String? textoOpcional;
   String? audioFileName;
-  String idAudio = '1234';
+  final String idAudio = '1234';
 
   void onFileSelected(String filePath) {
-    setState(() {
-      audioFileName = filePath;
-    });
+    setState(() => audioFileName = filePath);
+  }
+
+  Map<String, dynamic> _buildJsonData() {
+    final fechaNacimiento = selectedDate ?? DateTime.now();
+    final edad = DateTime.now().difference(fechaNacimiento).inDays ~/ 365;
+
+    return {
+      "metadata": {
+        "fecha_nacimiento": fechaNacimiento.toIso8601String(),
+        "edad": edad,
+        "fecha_grabacion": DateTime.now().toIso8601String()
+      },
+      "ubicacion": {
+        "hospital": hospital,
+        "codigo_hospital": hospitalMap[hospital] ?? '00',
+        "consultorio": consultorio,
+        "codigo_consultorio": consultorioMap[consultorio] ?? '00'
+      },
+      "diagnostico": {
+        "estado": estado,
+        "foco_auscultacion": focoAuscultacion,
+        "codigo_foco": focoMap[focoAuscultacion] ?? '00',
+        "observaciones": textoOpcional ?? "No aplica"
+      },
+      "archivo": {
+        "id_audio": idAudio,
+        "nombre_original": audioFileName?.split('/').last ?? '',
+        "ruta_original": audioFileName ?? '',
+      }
+    };
+  }
+
+  String _generateFileName() {
+    if (selectedDate == null) return '00-00-00-00-00-00-00.wav';
+
+    final fecha = selectedDate!;
+    final edad = DateTime.now().year - fecha.year;
+
+    return '${[
+      _twoDigits(fecha.day),
+      _twoDigits(fecha.month),
+      _twoDigits(fecha.year % 100),
+      consultorioMap[consultorio] ?? '00',
+      hospitalMap[hospital] ?? '00',
+      focoMap[focoAuscultacion] ?? '00',
+      idAudio,
+      _twoDigits(edad),
+      (textoOpcional?.isNotEmpty ?? false) ? '01' : '00'
+    ].join('-')}.wav';
+  }
+
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  void _submitForm() {
+    if (!_formKey.currentState!.validate()) return;
+    if (audioFileName == null || !File(audioFileName!).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Selecciona un archivo de audio válido'),
+      ));
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultadoPage(
+          nuevoNombreArchivo: _generateFileName(),
+          audioFilePath: audioFileName!,
+          jsonString: jsonEncode(_buildJsonData()),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Etiquetar sonido'),
-      ),
+      appBar: AppBar(title: const Text('Etiquetar sonido')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -40,236 +122,85 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                // Dropdown 1
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Hospital'),
-                  items: ['Departamental']
-                      .map((opcion) => DropdownMenuItem(
-                            value: opcion,
-                            child: Text(opcion),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      hospital = value;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Por favor selecciona una opción' : null,
+                _buildDropdown(
+                  label: 'Hospital',
+                  items: hospitalMap.keys.toList(),
+                  onChanged: (v) => setState(() => hospital = v),
                 ),
-                // Dropdown 2
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Consultorio'),
-                  items: ['101 A', '102 B', '103 C']
-                      .map((opcion) => DropdownMenuItem(
-                            value: opcion,
-                            child: Text(opcion),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      consultorio = value;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Por favor selecciona una opción' : null,
+                _buildDropdown(
+                  label: 'Consultorio',
+                  items: consultorioMap.keys.toList(),
+                  onChanged: (v) => setState(() => consultorio = v),
                 ),
-                // Dropdown 3
-                DropdownButtonFormField<String>(
-                  decoration:
-                      const InputDecoration(labelText: 'Estado del sonido'),
-                  items: ['Normal', 'Anormal']
-                      .map((opcion) => DropdownMenuItem(
-                            value: opcion,
-                            child: Text(opcion),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      estado = value;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Por favor selecciona una opción' : null,
+                _buildDropdown(
+                  label: 'Estado del sonido',
+                  items: ['Normal', 'Anormal'],
+                  onChanged: (v) => setState(() => estado = v),
                 ),
-                // Dropdown 4
-                DropdownButtonFormField<String>(
-                  decoration:
-                      const InputDecoration(labelText: 'Foco de auscultación'),
-                  items: ['Aórtico', 'Pulmonar', 'Tricuspídeo', 'Mitral']
-                      .map((opcion) => DropdownMenuItem(
-                            value: opcion,
-                            child: Text(opcion),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      focoAuscultacion = value;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Por favor selecciona una opción' : null,
+                _buildDropdown(
+                  label: 'Foco de auscultación',
+                  items: focoMap.keys.toList(),
+                  onChanged: (v) => setState(() => focoAuscultacion = v),
                 ),
-                // Date Picker
-                TextFormField(
-                  decoration:
-                      const InputDecoration(labelText: 'Fecha de nacimiento'),
-                  readOnly: true,
-                  onTap: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-                    if (pickedDate != null) {
-                      setState(() {
-                        selectedDate = pickedDate;
-                      });
-                    }
-                  },
-                  controller: TextEditingController(
-                    text: selectedDate != null
-                        ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                        : '',
-                  ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Selecciona una fecha'
-                      : null,
-                ),
-                // Campo de texto opcional
-                TextFormField(
-                  decoration: const InputDecoration(
-                      labelText: 'Diagnostico (Opcional)'),
-                  onChanged: (value) {
-                    setState(() {
-                      textoOpcional = value;
-                    });
-                  },
-                ),
-                // Campo para subir archivo de audio
-                AudioFilePicker(onFileSelected: (filePath) {
-                  setState(() {
-                    audioFileName = filePath;
-                  });
-                }),
+                _buildDatePicker(),
+                _buildOptionalTextField(),
+                AudioFilePicker(onFileSelected: onFileSelected),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() &&
-                        audioFileName != null) {
-                      // Generar el nuevo nombre del archivo según las opciones seleccionadas
-                      String dia = selectedDate != null
-                          ? selectedDate!.day.toString().padLeft(2, '0')
-                          : '00';
-                      String mes = selectedDate != null
-                          ? selectedDate!.month.toString().padLeft(2, '0')
-                          : '00';
-                      String anio = selectedDate != null
-                          ? selectedDate!.year.toString().substring(2, 4)
-                          : '00';
-
-                      String consultorioName = '00';
-                      switch (consultorio) {
-                        case '101 A':
-                          consultorioName = '01';
-                          break;
-                        case '102 B':
-                          consultorioName = '02';
-                          break;
-                        case '103 C':
-                          consultorioName = '03';
-                          break;
-                      }
-
-                      String hospitalName = '00';
-                      if (hospital == 'Departamental') {
-                        hospitalName = '01';
-                      }
-
-                      String focoAuscultacionName = '00';
-                      switch (focoAuscultacion) {
-                        case 'Aórtico':
-                          focoAuscultacionName = '01';
-                          break;
-                        case 'Pulmonar':
-                          focoAuscultacionName = '02';
-                          break;
-                        case 'Tricuspídeo':
-                          focoAuscultacionName = '03';
-                          break;
-                        case 'Mitral':
-                          focoAuscultacionName = '04';
-                          break;
-                      }
-
-                      int edad = selectedDate != null
-                          ? DateTime.now().year - selectedDate!.year
-                          : 0;
-                      String diagnostico =
-                          textoOpcional != null && textoOpcional!.isNotEmpty
-                              ? '01'
-                              : '00';
-
-                      String nuevoNombreArchivo =
-                          '${dia}${mes}${anio}-${consultorioName}${hospitalName}-${focoAuscultacionName}-${idAudio}-${edad.toString().padLeft(2, '0')}${diagnostico}.wav';
-
-                      if (textoOpcional == null) {
-                        textoOpcional = "No aplica";
-                      }
-
-                      // Crear el JSON con los datos especificados
-                      Map<String, dynamic> jsonData = {
-                        "DD": dia,
-                        "MM": mes,
-                        "AA": anio,
-                        "IDID": idAudio,
-                        "CS": consultorio,
-                        "HS": hospital,
-                        "FA": focoAuscultacion,
-                        "ES": textoOpcional,
-                        "URL": "url"
-                      };
-
-                      String jsonString = jsonEncode(jsonData);
-
-                      // Navegar a la página de resultado y pasar el nuevo nombre del archivo, el path del archivo original y el JSON
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ResultadoPage(
-                            nuevoNombreArchivo: nuevoNombreArchivo,
-                            audioFilePath: audioFileName!,
-                            jsonString: jsonString,
-                          ),
-                        ),
-                      );
-
-                      // Procesar datos aquí
-                      print('Opción 1: $hospital');
-                      print('Opción 2: $consultorio');
-                      print('Opción 3: $estado');
-                      print('Opción 4: $focoAuscultacion');
-                      print('Fecha: ${selectedDate?.toString()}');
-                      print('Texto Opcional: $textoOpcional');
-                      print('Audio File: $audioFileName');
-                    } else if (audioFileName == null) {
-                      // Mostrar mensaje de error si no se seleccionó archivo de audio
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Por favor selecciona un archivo de audio (.wav)'),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _submitForm,
                   child: const Text('Enviar'),
-                ),
+                )
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(labelText: label),
+      items: items
+          .map((opcion) => DropdownMenuItem(
+                value: opcion,
+                child: Text(opcion),
+              ))
+          .toList(),
+      onChanged: onChanged,
+      validator: (v) => v == null ? 'Selecciona una opción' : null,
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return TextFormField(
+      decoration: const InputDecoration(labelText: 'Fecha de nacimiento'),
+      readOnly: true,
+      onTap: () async {
+        final pickedDate = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+        );
+        if (pickedDate != null) setState(() => selectedDate = pickedDate);
+      },
+      controller: TextEditingController(
+        text: selectedDate?.toIso8601String().split('T').first ?? '',
+      ),
+      validator: (v) => selectedDate == null ? 'Selecciona una fecha' : null,
+    );
+  }
+
+  Widget _buildOptionalTextField() {
+    return TextFormField(
+      decoration: const InputDecoration(labelText: 'Diagnóstico (Opcional)'),
+      onChanged: (v) => setState(() => textoOpcional = v),
+      maxLines: 3,
     );
   }
 }
