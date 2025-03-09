@@ -16,7 +16,7 @@ class ResultadoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Renombrar el archivo
     File originalFile = File(audioFilePath);
-    String newFilePath = originalFile.parent.path + '/' + nuevoNombreArchivo;
+    String newFilePath = '${originalFile.parent.path}/$nuevoNombreArchivo';
     originalFile.renameSync(newFilePath);
 
     return Scaffold(

@@ -7,10 +7,10 @@ class FormularioCompletoPage extends StatefulWidget {
   const FormularioCompletoPage({super.key});
 
   @override
-  _FormularioCompletoPageState createState() => _FormularioCompletoPageState();
+  FormularioCompletoPageState createState() => FormularioCompletoPageState();
 }
 
-class _FormularioCompletoPageState extends State<FormularioCompletoPage> {
+class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
   String? hospital;
   String? consultorio;

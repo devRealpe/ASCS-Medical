@@ -7,10 +7,10 @@ class AudioFilePicker extends StatefulWidget {
   const AudioFilePicker({super.key, required this.onFileSelected});
 
   @override
-  _AudioFilePickerState createState() => _AudioFilePickerState();
+  AudioFilePickerState createState() => AudioFilePickerState();
 }
 
-class _AudioFilePickerState extends State<AudioFilePicker> {
+class AudioFilePickerState extends State<AudioFilePicker> {
   String? _selectedFileName;
   String? _selectedFilePath;
 
