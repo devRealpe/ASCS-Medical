@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
+import '../drive_service/drive_service.dart';
 import '../../pages/form/widget.dart';
-import '../../pages/result_page/result_page.dart';
 
 class FormularioCompletoPage extends StatefulWidget {
   const FormularioCompletoPage({super.key});
@@ -13,34 +12,47 @@ class FormularioCompletoPage extends StatefulWidget {
 
 class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
-  final Map<String, String> consultorioMap = {
+  final DriveService _driveService = DriveService();
+
+  // Mapeos de opciones
+  final Map<String, String> _consultorioMap = {
     '101 A': '01',
     '102 B': '02',
     '103 C': '03'
   };
-  final Map<String, String> hospitalMap = {'Departamental': '01'};
-  final Map<String, String> focoMap = {
+  final Map<String, String> _hospitalMap = {'Departamental': '01'};
+  final Map<String, String> _focoMap = {
     'Aórtico': '01',
     'Pulmonar': '02',
     'Tricuspídeo': '03',
     'Mitral': '04'
   };
 
-  String? hospital;
-  String? consultorio;
-  String? estado;
-  String? focoAuscultacion;
-  DateTime? selectedDate;
-  String? textoOpcional;
-  String? audioFileName;
-  final String idAudio = '1234';
+  // Variables de estado del formulario
+  String? _hospital;
+  String? _consultorio;
+  String? _estado;
+  String? _focoAuscultacion;
+  DateTime? _selectedDate;
+  String? _textoOpcional;
+  String? _audioFileName;
 
-  void onFileSelected(String filePath) {
-    setState(() => audioFileName = filePath);
+  // Estado de la subida
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  String _uploadStatus = '';
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  void _onFileSelected(String filePath) {
+    setState(() => _audioFileName = filePath);
   }
 
   Map<String, dynamic> _buildJsonData() {
-    final fechaNacimiento = selectedDate ?? DateTime.now();
+    final fechaNacimiento = _selectedDate ?? DateTime.now();
     final edad = DateTime.now().difference(fechaNacimiento).inDays ~/ 365;
 
     return {
@@ -50,63 +62,112 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
         "fecha_grabacion": DateTime.now().toIso8601String()
       },
       "ubicacion": {
-        "hospital": hospital,
-        "codigo_hospital": hospitalMap[hospital] ?? '00',
-        "consultorio": consultorio,
-        "codigo_consultorio": consultorioMap[consultorio] ?? '00'
+        "hospital": _hospital,
+        "codigo_hospital": _hospitalMap[_hospital] ?? '00',
+        "consultorio": _consultorio,
+        "codigo_consultorio": _consultorioMap[_consultorio] ?? '00'
       },
       "diagnostico": {
-        "estado": estado,
-        "foco_auscultacion": focoAuscultacion,
-        "codigo_foco": focoMap[focoAuscultacion] ?? '00',
-        "observaciones": textoOpcional ?? "No aplica"
+        "estado": _estado,
+        "foco_auscultacion": _focoAuscultacion,
+        "codigo_foco": _focoMap[_focoAuscultacion] ?? '00',
+        "observaciones": _textoOpcional ?? "No aplica"
       },
       "archivo": {
-        "id_audio": idAudio,
-        "nombre_original": audioFileName?.split('/').last ?? '',
-        "ruta_original": audioFileName ?? '',
+        "nombre_original": _audioFileName?.split('/').last ?? '',
+        "ruta_original": _audioFileName ?? '',
       }
     };
   }
 
   String _generateFileName() {
-    if (selectedDate == null) return '00-00-00-00-00-00-00.wav';
+    if (_selectedDate == null) return '00-00-00-00-00-00-00.wav';
 
-    final fecha = selectedDate!;
+    final fecha = _selectedDate!;
     final edad = DateTime.now().year - fecha.year;
 
     return '${[
       _twoDigits(fecha.day),
       _twoDigits(fecha.month),
       _twoDigits(fecha.year % 100),
-      consultorioMap[consultorio] ?? '00',
-      hospitalMap[hospital] ?? '00',
-      focoMap[focoAuscultacion] ?? '00',
-      idAudio,
+      _consultorioMap[_consultorio] ?? '00',
+      _hospitalMap[_hospital] ?? '00',
+      _focoMap[_focoAuscultacion] ?? '00',
       _twoDigits(edad),
-      (textoOpcional?.isNotEmpty ?? false) ? '01' : '00'
+      (_textoOpcional?.isNotEmpty ?? false) ? '01' : '00'
     ].join('-')}.wav';
   }
 
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-    if (audioFileName == null || !File(audioFileName!).existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Selecciona un archivo de audio válido'),
-      ));
+    if (_audioFileName == null || !File(_audioFileName!).existsSync()) {
+      _showError('Selecciona un archivo de audio válido (.wav)');
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultadoPage(
-          nuevoNombreArchivo: _generateFileName(),
-          audioFilePath: audioFileName!,
-          jsonString: jsonEncode(_buildJsonData()),
-        ),
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.0;
+      _uploadStatus = 'Iniciando subida...';
+    });
+
+    try {
+      final jsonData = _buildJsonData();
+      final fileName = _generateFileName();
+
+      await _driveService.uploadFiles(
+        audioFile: File(_audioFileName!),
+        jsonData: jsonData,
+        fileName: fileName,
+        onProgress: (progress, status) {
+          if (mounted) {
+            setState(() {
+              _uploadProgress = progress;
+              _uploadStatus = status;
+            });
+          }
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _uploadStatus = '¡Subida completada con éxito! ✓';
+          _uploadProgress = 1.0;
+        });
+
+        await Future.delayed(const Duration(seconds: 2));
+        _resetForm();
+      }
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  void _resetForm() {
+    _formKey.currentState?.reset();
+    setState(() {
+      _hospital = null;
+      _consultorio = null;
+      _estado = null;
+      _focoAuscultacion = null;
+      _selectedDate = null;
+      _textoOpcional = null;
+      _audioFileName = null;
+      _uploadProgress = 0.0;
+      _uploadStatus = '';
+    });
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -114,44 +175,71 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Etiquetar sonido')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildDropdown(
-                  label: 'Hospital',
-                  items: hospitalMap.keys.toList(),
-                  onChanged: (v) => setState(() => hospital = v),
+      appBar: AppBar(
+        title: const Text('Etiquetar sonido'),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          _buildFormContent(),
+          if (_isUploading) _buildUploadOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormContent() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildDropdown(
+                label: 'Hospital',
+                items: _hospitalMap.keys.toList(),
+                value: _hospital,
+                onChanged: (v) => setState(() => _hospital = v),
+              ),
+              const SizedBox(height: 20),
+              _buildDropdown(
+                label: 'Consultorio',
+                items: _consultorioMap.keys.toList(),
+                value: _consultorio,
+                onChanged: (v) => setState(() => _consultorio = v),
+              ),
+              const SizedBox(height: 20),
+              _buildDropdown(
+                label: 'Estado del sonido',
+                items: ['Normal', 'Anormal'],
+                value: _estado,
+                onChanged: (v) => setState(() => _estado = v),
+              ),
+              const SizedBox(height: 20),
+              _buildDropdown(
+                label: 'Foco de auscultación',
+                items: _focoMap.keys.toList(),
+                value: _focoAuscultacion,
+                onChanged: (v) => setState(() => _focoAuscultacion = v),
+              ),
+              const SizedBox(height: 20),
+              _buildDatePicker(),
+              const SizedBox(height: 20),
+              _buildOptionalTextField(),
+              const SizedBox(height: 20),
+              AudioFilePicker(onFileSelected: _onFileSelected),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.cloud_upload),
+                label: const Text('Subir a Google Drive'),
+                onPressed: _isUploading ? null : _submitForm,
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 ),
-                _buildDropdown(
-                  label: 'Consultorio',
-                  items: consultorioMap.keys.toList(),
-                  onChanged: (v) => setState(() => consultorio = v),
-                ),
-                _buildDropdown(
-                  label: 'Estado del sonido',
-                  items: ['Normal', 'Anormal'],
-                  onChanged: (v) => setState(() => estado = v),
-                ),
-                _buildDropdown(
-                  label: 'Foco de auscultación',
-                  items: focoMap.keys.toList(),
-                  onChanged: (v) => setState(() => focoAuscultacion = v),
-                ),
-                _buildDatePicker(),
-                _buildOptionalTextField(),
-                AudioFilePicker(onFileSelected: onFileSelected),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  child: const Text('Enviar'),
-                )
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -161,10 +249,16 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   Widget _buildDropdown({
     required String label,
     required List<String> items,
+    required String? value,
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      decoration: InputDecoration(labelText: label),
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(),
+        filled: true,
+      ),
       items: items
           .map((opcion) => DropdownMenuItem(
                 value: opcion,
@@ -178,7 +272,12 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
 
   Widget _buildDatePicker() {
     return TextFormField(
-      decoration: const InputDecoration(labelText: 'Fecha de nacimiento'),
+      decoration: const InputDecoration(
+        labelText: 'Fecha de nacimiento',
+        border: OutlineInputBorder(),
+        suffixIcon: Icon(Icons.calendar_today),
+        filled: true,
+      ),
       readOnly: true,
       onTap: () async {
         final pickedDate = await showDatePicker(
@@ -187,20 +286,72 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
           firstDate: DateTime(1900),
           lastDate: DateTime.now(),
         );
-        if (pickedDate != null) setState(() => selectedDate = pickedDate);
+        if (pickedDate != null) setState(() => _selectedDate = pickedDate);
       },
       controller: TextEditingController(
-        text: selectedDate?.toIso8601String().split('T').first ?? '',
+        text: _selectedDate?.toLocal().toString().split(' ')[0] ?? '',
       ),
-      validator: (v) => selectedDate == null ? 'Selecciona una fecha' : null,
+      validator: (v) => _selectedDate == null ? 'Selecciona una fecha' : null,
     );
   }
 
   Widget _buildOptionalTextField() {
     return TextFormField(
-      decoration: const InputDecoration(labelText: 'Diagnóstico (Opcional)'),
-      onChanged: (v) => setState(() => textoOpcional = v),
+      decoration: const InputDecoration(
+        labelText: 'Diagnóstico (Opcional)',
+        border: OutlineInputBorder(),
+        filled: true,
+      ),
+      onChanged: (v) => setState(() => _textoOpcional = v),
       maxLines: 3,
+    );
+  }
+
+  Widget _buildUploadOverlay() {
+    return Container(
+      color: Colors.black.withAlpha((0.7 * 255).toInt()),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                _uploadStatus,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 15),
+              LinearProgressIndicator(
+                value: _uploadProgress,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor),
+                minHeight: 10,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                '${(_uploadProgress * 100).toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
