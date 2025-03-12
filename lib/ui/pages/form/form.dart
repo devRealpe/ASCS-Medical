@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../drive_service/drive_service.dart';
-import '../../pages/form/widget.dart';
+import '../form/widget.dart';
 
 class FormularioCompletoPage extends StatefulWidget {
   const FormularioCompletoPage({super.key});
@@ -28,7 +28,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     'Mitral': '04'
   };
 
-  // Variables de estado del formulario
+  // Controladores de estado
   String? _hospital;
   String? _consultorio;
   String? _estado;
@@ -44,6 +44,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
 
   @override
   void dispose() {
+    _driveService.dispose();
     super.dispose();
   }
 
@@ -256,7 +257,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
         filled: true,
       ),
       items: items
@@ -286,7 +287,9 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
           firstDate: DateTime(1900),
           lastDate: DateTime.now(),
         );
-        if (pickedDate != null) setState(() => _selectedDate = pickedDate);
+        if (pickedDate != null) {
+          setState(() => _selectedDate = pickedDate);
+        }
       },
       controller: TextEditingController(
         text: _selectedDate?.toLocal().toString().split(' ')[0] ?? '',
@@ -325,10 +328,8 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
               const SizedBox(height: 20),
               Text(
                 _uploadStatus,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 15),
@@ -343,10 +344,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
               const SizedBox(height: 15),
               Text(
                 '${(_uploadProgress * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
             ],
           ),
