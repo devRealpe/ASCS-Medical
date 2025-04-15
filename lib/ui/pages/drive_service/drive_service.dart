@@ -8,7 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 class DriveService {
-  Future<void> uploadFiles({
+  /// Recibe la información del formulario (archivo de audio, datos en formato JSON y nombre del archivo)
+  /// y se encarga de realizar el proceso de envío a Google Drive.
+  Future<void> sendFormDataToDrive({
     required File audioFile,
     required Map<String, dynamic> jsonData,
     required String fileName,
@@ -25,7 +27,7 @@ class DriveService {
       final client = await auth.clientViaServiceAccount(
           credentials, [drive.DriveApi.driveFileScope]);
 
-      // Subir archivo de audio con seguimiento de progreso
+      // 🔹 3. Subir archivo de audio
       await _uploadFileToDrive(
         client: client,
         file: audioFile,
@@ -34,8 +36,10 @@ class DriveService {
         onProgress: onProgress,
       );
 
-      // Subir JSON
+      // 🔹 4. Generar archivo JSON temporal a partir de los datos del formulario
       final jsonFile = await _createTempJsonFile(jsonData, fileName);
+
+      // 🔹 5. Subir archivo JSON
       await _uploadFileToDrive(
         client: client,
         file: jsonFile,
@@ -45,7 +49,8 @@ class DriveService {
       );
       await jsonFile.delete();
 
-      onProgress(1.0, 'Archivos subidos exitosamente');
+      // Notificar que ambos archivos se han subido exitosamente.
+      onProgress(1.0, '¡Form data enviada exitosamente!');
     } on SocketException catch (e) {
       throw Exception('Error de conexión: ${e.message}');
     } on http.ClientException catch (e) {
@@ -55,6 +60,7 @@ class DriveService {
     }
   }
 
+  /// Crea un archivo JSON temporal a partir de los datos recibidos.
   Future<File> _createTempJsonFile(
     Map<String, dynamic> jsonData,
     String fileName,
@@ -64,6 +70,8 @@ class DriveService {
     return file.writeAsString(jsonEncode(jsonData));
   }
 
+  /// Método encargado de realizar la subida de un archivo a Google Drive.
+  /// Se envía el archivo junto con su metadata y se realiza el seguimiento de progreso.
   Future<void> _uploadFileToDrive({
     required auth.AuthClient client,
     required File file,
@@ -72,20 +80,24 @@ class DriveService {
     required void Function(double progress, String status) onProgress,
   }) async {
     try {
-      var driveApi = drive.DriveApi(client);
+      final driveApi = drive.DriveApi(client);
+      final media = drive.Media(file.openRead(), file.lengthSync());
+      final fileMetadata = drive.File()
+        ..name = fileName
+        ..parents = [
+          "1T65JYEFuePon7gXO-HQc5ooXzZZAqSK4"
+        ]; // ID de la carpeta en Drive
 
-      var media = drive.Media(file.openRead(), file.lengthSync());
+      // Se realiza la petición de subida
+      final response = await driveApi.files.create(
+        fileMetadata,
+        uploadMedia: media,
+      );
 
-      var fileMetadata = drive.File();
-      fileMetadata.name = fileName;
-      fileMetadata.parents = [
-        "1T65JYEFuePon7gXO-HQc5ooXzZZAqSK4"
-      ]; // ID de la carpeta en Drive
-
-      var response =
-          await driveApi.files.create(fileMetadata, uploadMedia: media);
       double progress = 0.0;
-      double totalBytes = file.lengthSync().toDouble();
+      final totalBytes = file.lengthSync().toDouble();
+
+      // Se utiliza listen para ir marcando el progreso de la subida.
       file.openRead().listen(
         (chunk) {
           progress += chunk.length;
@@ -101,15 +113,16 @@ class DriveService {
   }
 
   void dispose() {
-    // No es necesario cerrar sesión ya que no usamos GoogleSignIn
+    // No es necesario cerrar sesión ya que no usamos GoogleSignIn.
   }
 
-  // Método para pruebas
+  // Método para pruebas (opcional)
   Future<void> testUpload() async {
-    final testFile = File('${(await getTemporaryDirectory()).path}/test.txt');
+    final tempDir = await getTemporaryDirectory();
+    final testFile = File('${tempDir.path}/test.txt');
     await testFile.writeAsString('Archivo de prueba');
 
-    await uploadFiles(
+    await sendFormDataToDrive(
       audioFile: testFile,
       jsonData: {'test': true},
       fileName: 'test_file',

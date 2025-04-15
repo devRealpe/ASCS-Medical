@@ -12,7 +12,6 @@ class FormularioCompletoPage extends StatefulWidget {
 
 class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
-  final DriveService _driveService = DriveService();
 
   // Mapeos de opciones
   final Map<String, String> _consultorioMap = {
@@ -37,14 +36,13 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   String? _textoOpcional;
   String? _audioFileName;
 
-  // Estado de la subida
+  // Variables para el seguimiento de envío
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   String _uploadStatus = '';
 
   @override
   void dispose() {
-    _driveService.dispose();
     super.dispose();
   }
 
@@ -108,43 +106,41 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       return;
     }
 
+    // Construir los datos del formulario
+    final jsonData = _buildJsonData();
+    final fileName = _generateFileName();
+
+    // Actualizar estado para mostrar progreso de envío
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
-      _uploadStatus = 'Iniciando subida...';
+      _uploadStatus = 'Iniciando envío...';
     });
 
     try {
-      final jsonData = _buildJsonData();
-      final fileName = _generateFileName();
-
-      await _driveService.uploadFiles(
+      // Instanciar y llamar al servicio de envío
+      final driveService = DriveService();
+      await driveService.sendFormDataToDrive(
         audioFile: File(_audioFileName!),
         jsonData: jsonData,
         fileName: fileName,
         onProgress: (progress, status) {
-          if (mounted) {
-            setState(() {
-              _uploadProgress = progress;
-              _uploadStatus = status;
-            });
-          }
+          setState(() {
+            _uploadProgress = progress;
+            _uploadStatus = status;
+          });
         },
       );
 
-      if (mounted) {
-        setState(() {
-          _uploadStatus = '¡Subida completada con éxito! ✓';
-          _uploadProgress = 1.0;
-        });
-
-        await Future.delayed(const Duration(seconds: 2));
-        _resetForm();
-      }
+      // Mostrar mensaje de éxito y reiniciar formulario
+      _showSuccess("Datos enviados exitosamente.");
+      _resetForm();
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      _showError(e.toString());
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      setState(() {
+        _isUploading = false;
+      });
     }
   }
 
@@ -168,6 +164,16 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
         duration: const Duration(seconds: 5),
       ),
     );
@@ -232,13 +238,56 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
               AudioFilePicker(onFileSelected: _onFileSelected),
               const SizedBox(height: 30),
               ElevatedButton.icon(
-                icon: const Icon(Icons.cloud_upload),
-                label: const Text('Subir a Google Drive'),
-                onPressed: _isUploading ? null : _submitForm,
+                icon: const Icon(Icons.send),
+                label: const Text('Enviar'),
+                onPressed: _submitForm,
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploadOverlay() {
+    return Container(
+      color: Colors.black.withAlpha((0.7 * 255).toInt()),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                _uploadStatus,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 15),
+              LinearProgressIndicator(
+                value: _uploadProgress,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor),
+                minHeight: 10,
+                // borderRadius en Flutter 3.7+ (o sustituir por BoxDecoration)
+              ),
+              const SizedBox(height: 15),
+              Text(
+                '${(_uploadProgress * 100).toStringAsFixed(1)}%',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
             ],
           ),
@@ -307,49 +356,6 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       ),
       onChanged: (v) => setState(() => _textoOpcional = v),
       maxLines: 3,
-    );
-  }
-
-  Widget _buildUploadOverlay() {
-    return Container(
-      color: Colors.black.withAlpha((0.7 * 255).toInt()),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          width: MediaQuery.of(context).size.width * 0.8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 20),
-              Text(
-                _uploadStatus,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 15),
-              LinearProgressIndicator(
-                value: _uploadProgress,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).primaryColor),
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(5),
-              ),
-              const SizedBox(height: 15),
-              Text(
-                '${(_uploadProgress * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
