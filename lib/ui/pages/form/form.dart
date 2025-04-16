@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../drive_service/drive_service.dart';
+import '/domain/services/aws_s3/aws_s3.dart';
 import '../form/widget.dart';
 
 class FormularioCompletoPage extends StatefulWidget {
@@ -110,7 +110,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     final jsonData = _buildJsonData();
     final fileName = _generateFileName();
 
-    // Actualizar estado para mostrar progreso de envío
+    // Actualizar estado para mostrar progreso del envío
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
@@ -118,9 +118,9 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     });
 
     try {
-      // Instanciar y llamar al servicio de envío
-      final driveService = DriveService();
-      await driveService.sendFormDataToDrive(
+      // Instanciar y llamar al servicio de Amplify Storage para S3
+      final s3Service = AwsAmplifyS3Service();
+      await s3Service.sendFormDataToS3(
         audioFile: File(_audioFileName!),
         jsonData: jsonData,
         fileName: fileName,
@@ -132,7 +132,6 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
         },
       );
 
-      // Mostrar mensaje de éxito y reiniciar formulario
       _showSuccess("Datos enviados exitosamente.");
       _resetForm();
     } catch (e) {
@@ -282,7 +281,6 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
                 valueColor: AlwaysStoppedAnimation<Color>(
                     Theme.of(context).primaryColor),
                 minHeight: 10,
-                // borderRadius en Flutter 3.7+ (o sustituir por BoxDecoration)
               ),
               const SizedBox(height: 15),
               Text(
