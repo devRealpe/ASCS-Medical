@@ -18,9 +18,9 @@ dependencies:
   path_provider: ^2.1.1 # Para manejo de rutas de archivos
   googleapis: ^11.4.0
   googleapis_auth: ^1.4.1
-  #amplify_flutter: ^2.6.1 # Para Amplify
-  #amplify_storage_s3: ^2.6.1 # Para almacenamiento en S3
-  #amplify_core: ^2.6.1 # Para funcionalidades básicas de Amplify
+  amplify_flutter: ^2.6.1 # Para Amplify
+  amplify_storage_s3: ^2.6.1 # Para almacenamiento en S3
+  amplify_core: ^2.6.1 # Para funcionalidades básicas de Amplify
 
 dev_dependencies:
   flutter_test:
@@ -30,8 +30,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   # Activa la sección de assets si tienes imágenes o recursos específicos
-  assets:
-    - lib/assets/credenciales.json
+  #assets:
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

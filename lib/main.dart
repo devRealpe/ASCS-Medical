@@ -1,14 +1,20 @@
-// Importaciones de paquetes y archivos locales
 import 'package:flutter/material.dart';
-import 'package:app_ascs/ui/pages/form/form.dart'; // Página del formulario principal
+import 'package:amplify_flutter/amplify_flutter.dart';
+import 'package:amplify_storage_s3/amplify_storage_s3.dart';
+import 'amplifyconfiguration.dart';
+import 'ui/pages/form/form.dart';
 
-// Punto de entrada principal de la aplicación
-void main() {
-  // Inicia la aplicación con el widget MyApp
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final storage = AmplifyStorageS3();
+
+  await Amplify.addPlugin(storage);
+  await Amplify.configure(amplifyconfig);
+
   runApp(const MyApp());
 }
 
-// Widget raíz de la aplicación
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
