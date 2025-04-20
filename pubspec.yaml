@@ -20,7 +20,7 @@ dependencies:
   googleapis_auth: ^1.4.1
   amplify_flutter: ^2.6.1 # Para Amplify
   amplify_storage_s3: ^2.6.1 # Para almacenamiento en S3
-  amplify_core: ^2.6.1 # Para funcionalidades básicas de Amplify
+  amplify_core: ^2.6.1 # Para Amplify Core
 
 dev_dependencies:
   flutter_test:
