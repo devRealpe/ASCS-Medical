@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
+import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'package:amplify_storage_s3/amplify_storage_s3.dart';
 import 'amplifyconfiguration.dart';
 import 'ui/pages/form/form.dart';
@@ -7,9 +8,10 @@ import 'ui/pages/form/form.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final auth = AmplifyAuthCognito();
   final storage = AmplifyStorageS3();
 
-  await Amplify.addPlugin(storage);
+  await Amplify.addPlugins([auth, storage]);
   await Amplify.configure(amplifyconfig);
 
   runApp(const MyApp());

@@ -21,6 +21,8 @@ dependencies:
   amplify_flutter: ^2.6.1 # Para Amplify
   amplify_storage_s3: ^2.6.1 # Para almacenamiento en S3
   amplify_core: ^2.6.1 # Para Amplify Core
+  amplify_auth_cognito: ^2.6.1 # Para autenticación con Cognito
+  amplify_api: ^2.6.1 # Para API de Amplify
 
 dev_dependencies:
   flutter_test:
