@@ -71,10 +71,6 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
         "foco_auscultacion": _focoAuscultacion,
         "codigo_foco": _focoMap[_focoAuscultacion] ?? '00',
         "observaciones": _textoOpcional ?? "No aplica"
-      },
-      "archivo": {
-        "nombre_original": _audioFileName?.split('/').last ?? '',
-        "ruta_original": _audioFileName ?? '',
       }
     };
   }
@@ -86,14 +82,16 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     final edad = DateTime.now().year - fecha.year;
 
     return '${[
-      _twoDigits(fecha.day),
-      _twoDigits(fecha.month),
-      _twoDigits(fecha.year % 100),
-      _consultorioMap[_consultorio] ?? '00',
-      _hospitalMap[_hospital] ?? '00',
-      _focoMap[_focoAuscultacion] ?? '00',
-      _twoDigits(edad),
-      (_textoOpcional?.isNotEmpty ?? false) ? '01' : '00'
+      _twoDigits(fecha.day) +
+          _twoDigits(fecha.month) +
+          _twoDigits(fecha.year % 100), // Día, mes y año juntos
+      (_consultorioMap[_consultorio] ?? '00') +
+          (_hospitalMap[_hospital] ?? '00'), // Consultorio y hospital
+      _focoMap[_focoAuscultacion] ?? '00', // Foco de auscultación
+      _twoDigits(edad), // Edad
+      (_textoOpcional?.isNotEmpty ?? false)
+          ? '01'
+          : '00' // Diagnóstico opcional
     ].join('-')}.wav';
   }
 
