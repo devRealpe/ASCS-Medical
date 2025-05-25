@@ -43,6 +43,9 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   double _uploadProgress = 0.0;
   String _uploadStatus = '';
 
+  // Clave para forzar la reconstrucción del widget de selección de archivos
+  Key _filePickerKey = UniqueKey();
+
   // Paleta de colores
   final Color _primaryColor =
       const Color(0xFF4361EE); // Ensure this is defined and not null
@@ -141,6 +144,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       _selectedDate = null;
       _textoOpcional = null;
       _audioFileName = null;
+      _filePickerKey = UniqueKey(); // 🔁 Fuerza reconstrucción del widget
       _uploadProgress = 0.0;
       _uploadStatus = '';
     });
@@ -323,6 +327,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
                       _buildOptionalTextField(),
                       const SizedBox(height: 20),
                       AudioFilePicker(
+                        key: _filePickerKey,
                         onFileSelected: _onFileSelected,
                         // Removed unsupported parameters
                       ),
