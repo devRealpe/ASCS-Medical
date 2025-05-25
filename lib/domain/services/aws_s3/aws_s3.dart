@@ -16,7 +16,7 @@ class AwsAmplifyS3Service {
       onProgress(0.0, 'Subiendo archivo de audio...');
       final audioUploadOperation = Amplify.Storage.uploadFile(
         localFile: AWSFile.fromPath(audioFile.path),
-        path: StoragePath.fromString('public/$fileName'),
+        path: StoragePath.fromString('public/audios/$fileName'),
         onProgress: (progress) {
           final fractionCompleted =
               progress.transferredBytes / progress.totalBytes;
@@ -33,7 +33,7 @@ class AwsAmplifyS3Service {
       onProgress(0.5, 'Subiendo archivo JSON...');
       final jsonUploadOperation = Amplify.Storage.uploadFile(
         localFile: AWSFile.fromPath(jsonFile.path),
-        path: StoragePath.fromString('public/$fileName.json'),
+        path: StoragePath.fromString('public/audios-json/$fileName.json'),
         onProgress: (progress) {
           final fractionCompleted =
               progress.transferredBytes / progress.totalBytes;

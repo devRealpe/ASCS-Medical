@@ -1,4 +1,0 @@
-Configuración de clases que permiten definir el comportamiento de nuestra aplicación
-con el exterior
-
-Solo se define la interfaz

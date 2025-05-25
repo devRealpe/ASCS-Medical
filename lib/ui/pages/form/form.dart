@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '/domain/services/aws_s3/aws_s3.dart';
+import '/domain/application/etiqueta_audio_service.dart';
+
 import '../form/widget.dart';
 
 class FormularioCompletoPage extends StatefulWidget {
@@ -59,50 +61,34 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     setState(() => _audioFileName = filePath);
   }
 
-  Map<String, dynamic> _buildJsonData() {
-    final fechaNacimiento = _selectedDate ?? DateTime.now();
-    final edad = DateTime.now().difference(fechaNacimiento).inDays ~/ 365;
+  final EtiquetaAudioService _etiquetaService = EtiquetaAudioService();
 
-    return {
-      "metadata": {
-        "fecha_nacimiento": fechaNacimiento.toIso8601String(),
-        "edad": edad,
-        "fecha_grabacion": DateTime.now().toIso8601String()
-      },
-      "ubicacion": {
-        "hospital": _hospital,
-        "codigo_hospital": _hospitalMap[_hospital] ?? '00',
-        "consultorio": _consultorio,
-        "codigo_consultorio": _consultorioMap[_consultorio] ?? '00'
-      },
-      "diagnostico": {
-        "estado": _estado,
-        "foco_auscultacion": _focoAuscultacion,
-        "codigo_foco": _focoMap[_focoAuscultacion] ?? '00',
-        "observaciones": _textoOpcional ?? "No aplica"
-      }
-    };
+  Map<String, dynamic> _buildJsonData() {
+    if (_selectedDate == null) {
+      throw Exception('Fecha de nacimiento no seleccionada');
+    }
+    return _etiquetaService.buildJsonData(
+      fechaNacimiento: _selectedDate!,
+      hospital: _hospital,
+      consultorio: _consultorio,
+      estado: _estado,
+      focoAuscultacion: _focoAuscultacion,
+      observaciones: _textoOpcional,
+    );
   }
 
   String _generateFileName() {
-    if (_selectedDate == null) return '00-00-00-00-00-00-00.wav';
-
-    final fecha = _selectedDate!;
-    final edad = DateTime.now().year - fecha.year;
-
-    return '${[
-      _twoDigits(fecha.day) +
-          _twoDigits(fecha.month) +
-          _twoDigits(fecha.year % 100),
-      (_consultorioMap[_consultorio] ?? '00') +
-          (_hospitalMap[_hospital] ?? '00'),
-      _focoMap[_focoAuscultacion] ?? '00',
-      _twoDigits(edad),
-      (_textoOpcional?.isNotEmpty ?? false) ? '01' : '00'
-    ].join('-')}.wav';
+    if (_selectedDate == null) {
+      throw Exception('Fecha de nacimiento no seleccionada');
+    }
+    return _etiquetaService.generateFileName(
+      fechaNacimiento: _selectedDate!,
+      hospital: _hospital,
+      consultorio: _consultorio,
+      focoAuscultacion: _focoAuscultacion,
+      observaciones: _textoOpcional,
+    );
   }
-
-  String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
