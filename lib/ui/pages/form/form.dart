@@ -64,7 +64,9 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     setState(() => _audioFileName = filePath);
   }
 
-  final EtiquetaAudioService _etiquetaService = EtiquetaAudioService();
+  final EtiquetaAudioService _etiquetaService = EtiquetaAudioService(
+    awsS3Service: AwsAmplifyS3Service(),
+  );
 
   Map<String, dynamic> _buildJsonData() {
     if (_selectedDate == null) {
@@ -80,11 +82,11 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     );
   }
 
-  String _generateFileName() {
+  Future<String> _generateFileName() async {
     if (_selectedDate == null) {
       throw Exception('Fecha de nacimiento no seleccionada');
     }
-    return _etiquetaService.generateFileName(
+    return await _etiquetaService.generateFileName(
       fechaNacimiento: _selectedDate!,
       hospital: _hospital,
       consultorio: _consultorio,
@@ -101,7 +103,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     }
 
     final jsonData = _buildJsonData();
-    final fileName = _generateFileName();
+    final fileName = await _generateFileName();
 
     setState(() {
       _isUploading = true;

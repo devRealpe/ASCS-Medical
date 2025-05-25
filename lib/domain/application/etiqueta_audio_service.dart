@@ -1,10 +1,18 @@
+import '../services/aws_s3/aws_s3.dart';
+
 class EtiquetaAudioService {
+  final AwsAmplifyS3Service awsS3Service;
+
+  EtiquetaAudioService({required this.awsS3Service});
+
   final Map<String, String> consultorioMap = {
     '101 A': '01',
     '102 B': '02',
     '103 C': '03'
   };
+
   final Map<String, String> hospitalMap = {'Departamental': '01'};
+
   final Map<String, String> focoMap = {
     'Aórtico': '01',
     'Pulmonar': '02',
@@ -43,17 +51,19 @@ class EtiquetaAudioService {
     };
   }
 
-  String generateFileName({
+  Future<String> generateFileName({
     required DateTime fechaNacimiento,
     required String? consultorio,
     required String? hospital,
     required String? focoAuscultacion,
     String? observaciones,
-  }) {
+  }) async {
     final edad = DateTime.now().year - fechaNacimiento.year;
     final ahora = DateTime.now(); // Fecha actual
 
     String twoDigits(int n) => n.toString().padLeft(2, '0');
+
+    final audioId = await awsS3Service.getNextAudioId();
 
     return '${[
       twoDigits(ahora.day) + // Día actual
@@ -62,7 +72,8 @@ class EtiquetaAudioService {
       (consultorioMap[consultorio] ?? '00') + (hospitalMap[hospital] ?? '00'),
       focoMap[focoAuscultacion] ?? '00',
       twoDigits(edad),
-      (observaciones?.isNotEmpty ?? false) ? '01' : '00'
+      (observaciones?.isNotEmpty ?? false) ? '01' : '00',
+      audioId
     ].join('-')}.wav';
   }
 }

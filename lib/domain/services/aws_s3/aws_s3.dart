@@ -60,4 +60,22 @@ class AwsAmplifyS3Service {
     await file.writeAsString(jsonEncode(jsonData));
     return file;
   }
+
+  /// Cuenta los archivos de audio en 'public/audios/' y retorna el siguiente ID disponible.
+  Future<String> getNextAudioId() async {
+    try {
+      final result = await Amplify.Storage.list(
+        path: StoragePath.fromString('public/audios/'),
+        options: const StorageListOptions(),
+      ).result;
+
+      final count = result.items.length;
+      final nextId = count + 1;
+      return nextId.toString().padLeft(4, '0'); // Formato: 0001, 0002, etc.
+    } on StorageException catch (e) {
+      throw Exception('Error al listar archivos: ${e.message}');
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
 }
