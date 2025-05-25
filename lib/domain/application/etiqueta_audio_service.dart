@@ -58,22 +58,26 @@ class EtiquetaAudioService {
     required String? focoAuscultacion,
     String? observaciones,
   }) async {
-    final edad = DateTime.now().year - fechaNacimiento.year;
     final ahora = DateTime.now(); // Fecha actual
+    final edad = ahora.difference(fechaNacimiento).inDays ~/ 365;
 
     String twoDigits(int n) => n.toString().padLeft(2, '0');
 
-    final audioId = await awsS3Service.getNextAudioId();
+    final dia = twoDigits(ahora.day);
+    final mes = twoDigits(ahora.month);
+    final anio = twoDigits(ahora.year % 100); // Últimos dos dígitos del año
 
-    return '${[
-      twoDigits(ahora.day) + // Día actual
-          twoDigits(ahora.month) + // Mes actual
-          twoDigits(ahora.year % 100), // Año actual (2 cifras)
-      (consultorioMap[consultorio] ?? '00') + (hospitalMap[hospital] ?? '00'),
-      focoMap[focoAuscultacion] ?? '00',
-      twoDigits(edad),
-      (observaciones?.isNotEmpty ?? false) ? '01' : '00',
-      audioId
-    ].join('-')}.wav';
+    final codConsultorio = consultorioMap[consultorio] ?? '00';
+    final codHospital = hospitalMap[hospital] ?? '00';
+    final codFoco = focoMap[focoAuscultacion] ?? '00';
+
+    final audioId = await awsS3Service.getNextAudioId(); // 4 dígitos (ej. 0001)
+    final edadStr = twoDigits(edad);
+    final obsStr = (observaciones?.isNotEmpty ?? false) ? '01' : '00';
+
+    final fileName =
+        '$dia$mes$anio-$codConsultorio$codHospital-$codFoco-$audioId-$edadStr$obsStr.wav';
+
+    return fileName;
   }
 }
