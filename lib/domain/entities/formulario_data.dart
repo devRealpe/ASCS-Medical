@@ -16,6 +16,8 @@ class FormularioData {
   final String filePath;
   final String fileName;
 
+  final String urlAudio; // nuevo campo para la URL del audio
+
   FormularioData({
     required this.fechaNacimiento,
     required this.edad,
@@ -30,6 +32,7 @@ class FormularioData {
     required this.observaciones,
     required this.filePath,
     required this.fileName,
+    required this.urlAudio, // nuevo campo
   });
 
   Map<String, dynamic> toJson() {
@@ -38,6 +41,7 @@ class FormularioData {
         'fechaNacimiento': fechaNacimiento.toIso8601String(),
         'edad': edad,
         'fechaGrabacion': fechaGrabacion.toIso8601String(),
+        'url_audio': urlAudio, // nuevo campo en el JSON
       },
       "ubicacion": {
         'hospital': hospital,

@@ -27,6 +27,7 @@ class EtiquetaAudioService {
     required String? estado,
     required String? focoAuscultacion,
     String? observaciones,
+    required String audioUrl,
   }) {
     final edad = DateTime.now().difference(fechaNacimiento).inDays ~/ 365;
 
@@ -34,7 +35,8 @@ class EtiquetaAudioService {
       "metadata": {
         "fecha_nacimiento": fechaNacimiento.toIso8601String(),
         "edad": edad,
-        "fecha_grabacion": DateTime.now().toIso8601String()
+        "fecha_grabacion": DateTime.now().toIso8601String(),
+        "url_audio": audioUrl
       },
       "ubicacion": {
         "hospital": hospital,

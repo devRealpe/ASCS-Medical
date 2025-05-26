@@ -79,6 +79,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       estado: _estado,
       focoAuscultacion: _focoAuscultacion,
       observaciones: _textoOpcional,
+      audioUrl: _audioFileName ?? '',
     );
   }
 
@@ -102,7 +103,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       return;
     }
 
-    final jsonData = _buildJsonData();
+    _buildJsonData();
     final fileName = await _generateFileName();
 
     setState(() {
@@ -115,8 +116,15 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
       final s3Service = AwsAmplifyS3Service();
       await s3Service.sendFormDataToS3(
         audioFile: File(_audioFileName!),
-        jsonData: jsonData,
         fileName: fileName,
+        fechaNacimiento: _selectedDate!,
+        hospital: _hospital,
+        consultorio: _consultorio,
+        estado: _estado,
+        focoAuscultacion: _focoAuscultacion,
+        observaciones: _textoOpcional,
+        audioUrl: _audioFileName ?? '',
+        etiquetaAudioService: _etiquetaService,
         onProgress: (progress, status) {
           setState(() {
             _uploadProgress = progress;

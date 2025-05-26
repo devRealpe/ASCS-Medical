@@ -2,14 +2,22 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import '/domain/application/etiqueta_audio_service.dart';
 
 class AwsAmplifyS3Service {
   /// Sube un archivo de audio y los datos del formulario (como archivo JSON) a S3.
   Future<void> sendFormDataToS3({
     required File audioFile,
-    required Map<String, dynamic> jsonData,
+    required DateTime fechaNacimiento,
+    required String? hospital,
+    required String? consultorio,
+    required String? estado,
+    required String? focoAuscultacion,
+    required String? observaciones,
     required String fileName,
     required void Function(double progress, String status) onProgress,
+    required EtiquetaAudioService etiquetaAudioService,
+    required String? audioUrl,
   }) async {
     try {
       // 1. Subir archivo de audio
@@ -26,10 +34,27 @@ class AwsAmplifyS3Service {
       await audioUploadOperation.result;
       onProgress(0.5, 'Archivo de audio subido exitosamente');
 
-      // 2. Crear archivo JSON temporal con los datos del formulario
+      // 2. Obtener URL pública del audio subido
+      final getUrlResult = await Amplify.Storage.getUrl(
+        path: StoragePath.fromString('public/audios/$fileName'),
+      ).result;
+      final audioUrl = getUrlResult.url;
+
+      // 3. Crear JSON con la URL del audio
+      final jsonData = etiquetaAudioService.buildJsonData(
+        fechaNacimiento: fechaNacimiento,
+        hospital: hospital,
+        consultorio: consultorio,
+        estado: estado,
+        focoAuscultacion: focoAuscultacion,
+        observaciones: observaciones,
+        audioUrl: audioUrl.toString(),
+      );
+
+      // 4. Crear archivo JSON temporal
       final jsonFile = await _createTempJsonFile(jsonData, fileName);
 
-      // 3. Subir archivo JSON
+      // 5. Subir archivo JSON
       onProgress(0.5, 'Subiendo archivo JSON...');
       final jsonUploadOperation = Amplify.Storage.uploadFile(
         localFile: AWSFile.fromPath(jsonFile.path),
@@ -43,7 +68,7 @@ class AwsAmplifyS3Service {
       await jsonUploadOperation.result;
       onProgress(1.0, 'Archivos subidos exitosamente a S3');
 
-      // Elimina el archivo JSON temporal
+      // 6. Elimina el archivo temporal
       await jsonFile.delete();
     } on StorageException catch (e) {
       throw Exception('Error en la subida: ${e.message}');

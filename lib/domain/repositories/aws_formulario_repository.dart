@@ -16,8 +16,15 @@ class AwsFormularioRepository implements FormularioRepository {
   }) async {
     await awsS3Service.sendFormDataToS3(
       audioFile: audioFile,
-      jsonData: jsonData,
       fileName: fileName,
+      fechaNacimiento: jsonData['fechaNacimiento'],
+      hospital: jsonData['hospital'],
+      consultorio: jsonData['consultorio'],
+      estado: jsonData['estado'],
+      focoAuscultacion: jsonData['focoAuscultacion'],
+      observaciones: jsonData['observaciones'],
+      etiquetaAudioService: jsonData['etiquetaAudioService'],
+      audioUrl: jsonData['audioUrl'],
       onProgress: onProgress ?? (progress, status) {},
     );
   }
