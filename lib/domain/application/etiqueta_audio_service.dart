@@ -5,13 +5,22 @@ class EtiquetaAudioService {
 
   EtiquetaAudioService({required this.awsS3Service});
 
+  // Mapa actualizado con todos los consultorios
   final Map<String, String> consultorioMap = {
+    // Departamental
     '101 A': '01',
     '102 B': '02',
-    '103 C': '03'
+
+    // Infantil
+    '103 C': '01',
+    '104 D': '02',
   };
 
-  final Map<String, String> hospitalMap = {'Departamental': '01'};
+  // Mapa actualizado con todos los hospitales
+  final Map<String, String> hospitalMap = {
+    'Departamental': '01',
+    'Infantil': '02',
+  };
 
   final Map<String, String> focoMap = {
     'Aórtico': '01',
