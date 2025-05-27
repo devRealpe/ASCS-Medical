@@ -90,10 +90,11 @@ Widget buildFormContent({
                   children: [
                     const SizedBox(height: 10),
                     buildSectionHeader(
-                        icon: Icons.medical_services,
-                        title: 'Información médica',
-                        primaryColor: primaryColor,
-                        textColor: textColor),
+                      icon: Icons.medical_services,
+                      title: 'Información médica',
+                      primaryColor: primaryColor,
+                      textColor: textColor,
+                    ),
                     const SizedBox(height: 20),
                     buildDropdown(
                       label: 'Estado del sonido',
@@ -106,15 +107,45 @@ Widget buildFormContent({
                       cardColor: cardColor,
                     ),
                     const SizedBox(height: 20),
-                    buildDropdown(
-                      label: 'Foco de auscultación',
-                      icon: Icons.hearing,
-                      items: focoMap.keys.toList(),
-                      value: focoAuscultacion,
-                      onChanged: onFocoChanged,
-                      primaryColor: primaryColor,
-                      textColor: textColor,
-                      cardColor: cardColor,
+// Aquí integramos el Row con el dropdown y el ícono de ayuda
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: buildDropdown(
+                            label: 'Foco de auscultación',
+                            icon: Icons.hearing,
+                            items: focoMap.keys.toList(),
+                            value: focoAuscultacion,
+                            onChanged: onFocoChanged,
+                            primaryColor: primaryColor,
+                            textColor: textColor,
+                            cardColor: cardColor,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.info_outline, color: primaryColor),
+                          tooltip: 'Ver focos de auscultación',
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Focos de auscultación'),
+                                content: Image.asset(
+                                  'assets/imagenes/foco_auscultacion.jpg', // Cambia la ruta si tu imagen está en otra carpeta
+                                  fit: BoxFit.contain,
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cerrar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
                     buildDatePicker(
