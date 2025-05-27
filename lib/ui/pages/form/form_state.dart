@@ -51,7 +51,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   Key _filePickerKey = UniqueKey();
 
   // Paleta de colores
-  final Color _primaryColor = const Color(0xFF4361EE);
+  final Color _primaryColor = const Color(0xFF1976D2);
   final Color _backgroundColor = const Color(0xFFF8F9FA);
   final Color _cardColor = Colors.white;
   final Color _textColor = const Color(0xFF212529);
@@ -202,13 +202,16 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     return Scaffold(
       backgroundColor: _backgroundColor,
       appBar: AppBar(
-        title: const Text('Etiquetar sonido cardíaco'),
+        title: const Text(
+          'Etiquetar sonido cardíaco',
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
         backgroundColor: _primaryColor,
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20),
+            bottom: Radius.circular(0),
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
