@@ -34,11 +34,13 @@ class AwsAmplifyS3Service {
       await audioUploadOperation.result;
       onProgress(0.5, 'Archivo de audio subido exitosamente');
 
-      // 2. Obtener URL pública del audio subido
-      final getUrlResult = await Amplify.Storage.getUrl(
-        path: StoragePath.fromString('public/audios/$fileName'),
-      ).result;
-      final audioUrl = getUrlResult.url;
+      // 2. Construir URL pública del audio subido
+      const bucketName =
+          'repositoryec237-dev'; // <-- Cambia esto por tu bucket real
+      const region =
+          'us-east-1'; // <-- Cambia esto por tu región, ej: us-east-1
+      final audioUrl =
+          'https://$bucketName.s3.$region.amazonaws.com/public/audios/$fileName';
 
       // 3. Crear JSON con la URL del audio
       final jsonData = etiquetaAudioService.buildJsonData(
@@ -48,7 +50,7 @@ class AwsAmplifyS3Service {
         estado: estado,
         focoAuscultacion: focoAuscultacion,
         observaciones: observaciones,
-        audioUrl: audioUrl.toString(),
+        audioUrl: audioUrl,
       );
 
       // 4. Crear archivo JSON temporal

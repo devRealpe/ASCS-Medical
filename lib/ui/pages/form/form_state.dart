@@ -5,6 +5,7 @@ import '/domain/services/aws_s3/aws_s3.dart';
 import '/domain/application/etiqueta_audio_service.dart';
 import 'form_widgets.dart';
 import 'form_upload_overlay.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
@@ -100,6 +101,14 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   }
 
   Future<void> _submitForm() async {
+    // Verifica conexión antes de validar el formulario
+    final connectivityResults = await Connectivity().checkConnectivity();
+    if (connectivityResults.contains(ConnectivityResult.none)) {
+      _showError(
+          'No hay conexión a internet. Por favor, verifica tu conexión e inténtalo de nuevo.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
     if (_audioFileName == null || !File(_audioFileName!).existsSync()) {
       _showError('Selecciona un archivo de audio válido (.wav)');
