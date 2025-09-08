@@ -23,19 +23,20 @@ dependencies:
   amplify_core: ^2.6.1 # Para Amplify Core
   amplify_auth_cognito: ^2.6.1 # Para autenticación con Cognito
   amplify_api: ^2.6.1 # Para API de Amplify
+  connectivity_plus: ^6.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  mockito: ^5.0.0
 
 flutter:
   uses-material-design: true
   # Activa la sección de assets si tienes imágenes o recursos específicos
-  #assets:
+  assets:
+    - assets/imagenes/foco_auscultacion.jpg
 
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
   #
   # Activa la sección de fonts si tienes fuentes personalizadas
   # fonts:
