@@ -1,0 +1,3 @@
+En esta parte va toda la parte de clases, metodos y componentes que accedan
+a funcionalidades nativas del dispositivo
+Ejm: Acceso con biometria, gps, camara, almacenamiento, etc.
