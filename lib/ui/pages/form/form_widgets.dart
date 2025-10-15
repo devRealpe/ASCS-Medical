@@ -118,7 +118,7 @@ Widget buildFormContent({
                       children: [
                         Expanded(
                           child: buildDropdown(
-                            label: 'Foco de auscultación',
+                            label: 'Foco auscultación',
                             icon: Icons.hearing,
                             items: focoMap.keys.toList(),
                             value: focoAuscultacion,
@@ -441,14 +441,14 @@ Widget buildDatePicker({
     decoration: InputDecoration(
       labelText: 'Fecha de nacimiento',
       labelStyle: TextStyle(
-        color: textColor.withAlpha((0.7 * 255).toInt()),
+        color: textColor.withValues(alpha: 0.7),
         fontWeight: FontWeight.w500,
       ),
       prefixIcon: Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: primaryColor.withAlpha((0.1 * 255).toInt()),
+          color: primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -462,7 +462,7 @@ Widget buildDatePicker({
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: primaryColor.withAlpha((0.1 * 255).toInt()),
+                color: primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -512,7 +512,12 @@ Widget buildDatePicker({
                 surface: cardColor,
                 onSurface: textColor,
               ),
-              dialogBackgroundColor: cardColor,
+              // ELIMINADO: dialogBackgroundColor (deprecated)
+              // El backgroundColor se controla desde DialogThemeData en el tema principal
+              // o se puede configurar aquí:
+              dialogTheme: DialogThemeData(
+                backgroundColor: cardColor, // CORREGIDO: usar DialogThemeData
+              ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
                   foregroundColor: primaryColor,
