@@ -26,9 +26,7 @@ class MyApp extends StatelessWidget {
       title: 'ASCS - Etiquetado Cardíaco',
       debugShowCheckedModeBanner: false,
 
-      // ========================================================================
-      // TEMA CLARO - COLORES MÉDICOS PROFESIONALES
-      // ========================================================================
+      // Utilizamos temas claros y oscuros personalizados
       theme: ThemeData(
         // Color primario: Azul médico profesional
         primaryColor: const Color(0xFF1976D2),
@@ -46,9 +44,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F7FA),
         cardColor: Colors.white,
 
-        // ======================================================================
-        // TIPOGRAFÍA MÉDICA PROFESIONAL
-        // ======================================================================
+        // Tipografía medica profesional
         textTheme: const TextTheme(
           // Títulos grandes
           headlineLarge: TextStyle(
@@ -89,9 +85,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // BOTONES ELEVADOS
-        // ======================================================================
+        // Botones elevados
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1976D2),
@@ -109,9 +103,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // BOTONES DE TEXTO
-        // ======================================================================
+        // Botones de texto
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: const Color(0xFF1976D2),
@@ -126,9 +118,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // CAMPOS DE TEXTO / INPUTS
-        // ======================================================================
+        // Campos de texto y formularios
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.grey[50],
@@ -185,9 +175,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // TARJETAS - CORREGIDO: Usar CardThemeData directamente
-        // ======================================================================
+        // Para las tarjetas utilizamos un diseño limpio
         cardTheme: CardThemeData(
           elevation: 3,
           shape: RoundedRectangleBorder(
@@ -198,9 +186,7 @@ class MyApp extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 8),
         ),
 
-        // ======================================================================
-        // APP BAR
-        // ======================================================================
+        // Barra de la aplicación (AppBar)
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF1976D2),
           foregroundColor: Colors.white,
@@ -218,12 +204,9 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // DIÁLOGOS - CORREGIDO: Usar DialogThemeData directamente
-        // ======================================================================
+        // Dialogos modales
         dialogTheme: DialogThemeData(
-          backgroundColor: Colors
-              .white, // backgroundColor aquí en lugar de dialogBackgroundColor
+          backgroundColor: Colors.white,
           elevation: 8,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -235,34 +218,26 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // ======================================================================
-        // DIVIDERS
-        // ======================================================================
+        // Divisores entre secciones
         dividerTheme: DividerThemeData(
           color: Colors.grey.shade300,
           thickness: 1,
           space: 20,
         ),
 
-        // ======================================================================
-        // ICONOS
-        // ======================================================================
+        // Iconos
         iconTheme: const IconThemeData(
           color: Color(0xFF1976D2),
           size: 24,
         ),
 
-        // ======================================================================
-        // PROGRESS INDICATORS
-        // ======================================================================
+        // Indicadores de progreso
         progressIndicatorTheme: const ProgressIndicatorThemeData(
           color: Color(0xFF1976D2),
           circularTrackColor: Color(0xFFE3F2FD),
         ),
 
-        // ======================================================================
-        // SNACKBARS
-        // ======================================================================
+        // Snackbars
         snackBarTheme: SnackBarThemeData(
           backgroundColor: const Color(0xFF263238),
           contentTextStyle: const TextStyle(
@@ -279,9 +254,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // ========================================================================
-      // TEMA OSCURO OPCIONAL (para modo nocturno)
-      // ========================================================================
+      // Definición del tema oscuro para incorporarlo más adelante
       darkTheme: ThemeData(
         primaryColor: const Color(0xFF42A5F5),
         colorScheme: ColorScheme.fromSeed(
@@ -305,7 +278,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // Modo de tema (puedes cambiarlo dinámicamente)
       themeMode: ThemeMode.light, // Opciones: light, dark, system
 
       // Página principal
@@ -314,49 +286,36 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ==============================================================================
-// CLASE AUXILIAR: CONSTANTES DE COLORES MÉDICOS
-// ==============================================================================
-// Puedes usar esta clase en cualquier parte de tu aplicación
+// Clase para definir colores personalizados
 class MedicalColors {
   // Prevenir instanciación
   MedicalColors._();
 
-  // ============================================================================
-  // COLORES PRIMARIOS
-  // ============================================================================
+  // Colores primarios
   static const Color primaryBlue = Color(0xFF1976D2); // Azul médico
   static const Color secondaryTeal = Color(0xFF00897B); // Teal médico
   static const Color accentCyan = Color(0xFF00ACC1); // Cyan acento
   static const Color lightBlue = Color(0xFF42A5F5); // Azul claro
 
-  // ============================================================================
-  // COLORES DE ESTADO
-  // ============================================================================
+  // Colores de estado
   static const Color successGreen = Color(0xFF43A047); // Verde éxito
   static const Color warningOrange = Color(0xFFFF6F00); // Naranja advertencia
   static const Color errorRed = Color(0xFFD32F2F); // Rojo error
   static const Color infoBlue = Color(0xFF1976D2); // Azul información
 
-  // ============================================================================
-  // COLORES DE FONDO
-  // ============================================================================
+  // Colores de fondo
   static const Color backgroundLight = Color(0xFFF5F7FA); // Fondo claro
   static const Color cardWhite = Color(0xFFFFFFFF); // Tarjeta blanca
   static const Color surfaceGrey = Color(0xFFFAFAFA); // Superficie gris
   static const Color dividerGrey = Color(0xFFE0E0E0); // Divisor gris
 
-  // ============================================================================
-  // COLORES DE TEXTO
-  // ============================================================================
+  // Colores de texto
   static const Color textPrimary = Color(0xFF263238); // Texto principal
   static const Color textSecondary = Color(0xFF546E7A); // Texto secundario
   static const Color textHint = Color(0xFF90A4AE); // Texto hint
   static const Color textDisabled = Color(0xFFBDBDBD); // Texto deshabilitado
 
-  // ============================================================================
-  // GRADIENTES MÉDICOS
-  // ============================================================================
+  // Gradientes personalizados
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
     begin: Alignment.topLeft,

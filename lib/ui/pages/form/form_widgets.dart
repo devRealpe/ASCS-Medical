@@ -19,6 +19,7 @@ Widget buildFormContent({
   required Color textColor,
   required Map<String, String> hospitalMap,
   required String? hospital,
+  required bool mostrarSelectorHospital, // Nuevo parámetro
   required Function(String?) onHospitalChanged,
   required Function(String?) onConsultorioChanged,
   required Function(String?) onEstadoChanged,
@@ -118,7 +119,7 @@ Widget buildFormContent({
                       children: [
                         Expanded(
                           child: buildDropdown(
-                            label: 'Foco auscultación',
+                            label: 'Foco de auscultación',
                             icon: Icons.hearing,
                             items: focoMap.keys.toList(),
                             value: focoAuscultacion,
@@ -293,10 +294,7 @@ Widget buildFormContent({
   );
 }
 
-// ============================================================================
-// WIDGETS AUXILIARES MEJORADOS
-// ============================================================================
-
+// Widgets auxiliares
 Widget buildSectionHeader({
   required IconData icon,
   required String title,
@@ -441,14 +439,14 @@ Widget buildDatePicker({
     decoration: InputDecoration(
       labelText: 'Fecha de nacimiento',
       labelStyle: TextStyle(
-        color: textColor.withValues(alpha: 0.7),
+        color: textColor.withAlpha((0.7 * 255).toInt()),
         fontWeight: FontWeight.w500,
       ),
       prefixIcon: Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
+          color: primaryColor.withAlpha((0.1 * 255).toInt()),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -462,7 +460,7 @@ Widget buildDatePicker({
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
+                color: primaryColor.withAlpha((0.1 * 255).toInt()),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -512,11 +510,10 @@ Widget buildDatePicker({
                 surface: cardColor,
                 onSurface: textColor,
               ),
-              // ELIMINADO: dialogBackgroundColor (deprecated)
-              // El backgroundColor se controla desde DialogThemeData en el tema principal
-              // o se puede configurar aquí:
               dialogTheme: DialogThemeData(
-                backgroundColor: cardColor, // CORREGIDO: usar DialogThemeData
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(

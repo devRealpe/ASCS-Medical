@@ -192,7 +192,7 @@ class _FormUploadOverlayState extends State<FormUploadOverlay>
 
                     const SizedBox(height: 24),
 
-                    // Barra de progreso lineal mejorada
+                    // Barra de progreso lineal
                     Container(
                       height: 8,
                       decoration: BoxDecoration(

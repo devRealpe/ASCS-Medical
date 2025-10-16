@@ -12,14 +12,18 @@ class EtiquetaAudioService {
     '102 B': '02',
 
     // Infantil
-    '103 C': '01',
-    '104 D': '02',
+    //'103 C': '01',
+    //'104 D': '02',
+
+    // Agregar más consultorios según sea necesario
   };
 
   // Mapa actualizado con todos los hospitales
   final Map<String, String> hospitalMap = {
     'Departamental': '01',
-    'Infantil': '02',
+    //'Infantil': '02',
+
+    // Agregar más hospitales según sea necesario
   };
 
   final Map<String, String> focoMap = {

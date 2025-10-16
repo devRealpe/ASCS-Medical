@@ -10,16 +10,32 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final _formKey = GlobalKey<FormState>();
 
+  //
+  // CONFIGURACIÓN DE HOSPITALES
+  //
+  // NOTA: Por el momento solo trabajamos con el Hospital Departamental.
+  // Para habilitar múltiples hospitales:
+  // 1. Descomenta las líneas de 'Infantil' (o agrega nuevos hospitales)
+  // 2. Cambia _mostrarSelectorHospital a true
+  // 3. Cambia _hospitalPorDefecto a null si quieres que el usuario seleccione
+  //
+
+  final bool _mostrarSelectorHospital =
+      false; // Cambiar a true para mostrar selector
+  final String _hospitalPorDefecto = 'Departamental';
+
   // Mapeo de hospitales a consultorios
   final Map<String, List<String>> _hospitalConsultorios = {
     'Departamental': ['101 A', '102 B'],
-    'Infantil': ['103 C', '104 D'],
+    // 'Infantil': ['103 C', '104 D'], // Descomentar para habilitar
+    // 'San José': ['201 A', '202 B'], // Ejemplo de nuevo hospital
   };
 
   // Mapa de hospitales para el parámetro hospitalMap (clave y valor iguales)
   final Map<String, String> _hospitalMap = {
     'Departamental': 'Departamental',
-    'Infantil': 'Infantil',
+    // 'Infantil': 'Infantil', // Descomentar para habilitar
+    // 'San José': 'San José', // Ejemplo de nuevo hospital
   };
 
   List<String> get _consultoriosDisponibles {
@@ -62,6 +78,15 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   final EtiquetaAudioService _etiquetaService = EtiquetaAudioService(
     awsS3Service: AwsAmplifyS3Service(),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa el hospital por defecto si no se muestra el selector
+    if (!_mostrarSelectorHospital) {
+      _hospital = _hospitalPorDefecto;
+    }
+  }
 
   @override
   void dispose() {
@@ -159,7 +184,8 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   void _resetForm() {
     _formKey.currentState?.reset();
     setState(() {
-      _hospital = null;
+      // Mantener el hospital por defecto después del reset
+      _hospital = _hospitalPorDefecto;
       _consultorio = null;
       _estado = null;
       _focoAuscultacion = null;
@@ -206,9 +232,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
     );
   }
 
-  // ============================================================================
-  // MODAL DE INFORMACIÓN MEJORADO
-  // ============================================================================
+  // Modal para mostrar información del formulario
   void _showInfoDialog() {
     showDialog(
       context: context,
@@ -226,222 +250,222 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                _primaryColor.withValues(alpha: 0.02),
+                _primaryColor.withAlpha((0.02 * 255).toInt()),
               ],
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ================================================================
-              // ENCABEZADO DEL MODAL CON GRADIENTE
-              // ================================================================
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _primaryColor,
-                      _primaryColor.withValues(alpha: 0.85),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Encabezado del modal
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        _primaryColor,
+                        _primaryColor.withAlpha((0.85 * 255).toInt()),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha((0.2 * 255).toInt()),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Información',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Guía de uso del formulario',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
+
+                // Contenido del modal
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Descripción principal
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _primaryColor.withAlpha((0.08 * 255).toInt()),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _primaryColor.withAlpha((0.2 * 255).toInt()),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.description_outlined,
+                              color: _primaryColor,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Complete el formulario para etiquetar el sonido cardíaco del paciente.',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.5,
+                                  color: Color(0xFF263238),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.info_outline,
-                        color: Colors.white,
-                        size: 28,
+
+                      const SizedBox(height: 20),
+
+                      // Lista de campos obligatorios
+                      _buildInfoSection(
+                        icon: Icons.check_circle_outline,
+                        title: 'Campos obligatorios',
+                        items: [
+                          _mostrarSelectorHospital
+                              ? 'Hospital y Consultorio'
+                              : 'Consultorio',
+                          'Estado del sonido (Normal/Anormal)',
+                          'Foco de auscultación',
+                          'Fecha de nacimiento',
+                          'Archivo de audio (.wav)',
+                        ],
+                        iconColor: _successColor,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                      const SizedBox(height: 16),
+
+                      // Campo opcional
+                      _buildInfoSection(
+                        icon: Icons.edit_note,
+                        title: 'Campo opcional',
+                        items: [
+                          'Diagnóstico u observaciones médicas',
+                        ],
+                        iconColor: Colors.orange,
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Nota importante
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withAlpha((0.1 * 255).toInt()),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.amber.withAlpha((0.3 * 255).toInt()),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.lightbulb_outline,
+                              color: Colors.amber,
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Asegúrese de tener conexión a internet antes de enviar el formulario.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF263238),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Boton de 'entendido' del modal
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        shadowColor:
+                            _primaryColor.withAlpha((0.4 * 255).toInt()),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(Icons.check, size: 20),
+                          SizedBox(width: 8),
                           Text(
-                            'Información',
+                            'Entendido',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
                               letterSpacing: 0.5,
                             ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Guía de uso del formulario',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ================================================================
-              // CONTENIDO DEL MODAL
-              // ================================================================
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Descripción principal
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _primaryColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _primaryColor.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            color: _primaryColor,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'Complete el formulario para etiquetar el sonido cardíaco del paciente.',
-                              style: TextStyle(
-                                fontSize: 15,
-                                height: 1.5,
-                                color: Color(0xFF263238),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Lista de campos obligatorios
-                    _buildInfoSection(
-                      icon: Icons.check_circle_outline,
-                      title: 'Campos obligatorios',
-                      items: [
-                        'Hospital y Consultorio',
-                        'Estado del sonido (Normal/Anormal)',
-                        'Foco de auscultación',
-                        'Fecha de nacimiento',
-                        'Archivo de audio (.wav)',
-                      ],
-                      iconColor: _successColor,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Campo opcional
-                    _buildInfoSection(
-                      icon: Icons.edit_note,
-                      title: 'Campo opcional',
-                      items: [
-                        'Diagnóstico u observaciones médicas',
-                      ],
-                      iconColor: Colors.orange,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Nota importante
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.amber.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: Colors.amber,
-                            size: 20,
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Asegúrese de tener conexión a internet antes de enviar el formulario.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF263238),
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ================================================================
-              // BOTÓN DE CERRAR
-              // ================================================================
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Entendido',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -484,7 +508,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.6),
+                      color: iconColor.withAlpha((0.6 * 255).toInt()),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -510,9 +534,8 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
-      // ========================================================================
-      // APP BAR MEJORADO CON DISEÑO MODERNO
-      // ========================================================================
+
+      // AppBar personalizado
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Container(
@@ -522,12 +545,12 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
               end: Alignment.bottomRight,
               colors: [
                 _primaryColor,
-                _primaryColor.withValues(alpha: 0.85),
+                _primaryColor.withAlpha((0.85 * 255).toInt()),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: _primaryColor.withValues(alpha: 0.3),
+                color: _primaryColor.withAlpha((0.3 * 255).toInt()),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -545,10 +568,10 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withAlpha((0.2 * 255).toInt()),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withAlpha((0.3 * 255).toInt()),
                             width: 2,
                           ),
                         ),
@@ -580,7 +603,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
                       // Botón de información
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white.withAlpha((0.15 * 255).toInt()),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -621,6 +644,7 @@ class FormularioCompletoPageState extends State<FormularioCompletoPage> {
             backgroundColor: _backgroundColor,
             cardColor: _cardColor,
             textColor: _textColor,
+            mostrarSelectorHospital: _mostrarSelectorHospital,
             onHospitalChanged: (v) {
               setState(() {
                 _hospital = v;
