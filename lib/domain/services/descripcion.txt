@@ -1,2 +1,0 @@
-Interfaces que solo asimilan información, dicha información 
-sera manipulada despues por la parte de data es decir otra carpeta

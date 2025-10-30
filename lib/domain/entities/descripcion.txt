@@ -1,2 +1,0 @@
-Aqui pondremos las clases que conforman nuestras entidades en nuestra logica de negocio
-Ejemplo: Usuario => Con todas las funciones necesarias para obtener su información
