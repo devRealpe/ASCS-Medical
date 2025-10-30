@@ -7,6 +7,10 @@
     {
       "nombre": "San Juan de Dios",
       "codigo": "02"
+    },
+    {
+      "nombre": "General",
+      "codigo": "03"
     }
   ],
   "consultorios": [
@@ -29,6 +33,11 @@
       "nombre": "202 D",
       "codigo": "04",
       "codigo_hospital": "02"
+    },
+    {
+      "nombre": "301 E",
+      "codigo": "05",
+      "codigo_hospital": "03"
     }
   ],
   "focos": [

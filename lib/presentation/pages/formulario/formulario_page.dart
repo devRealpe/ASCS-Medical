@@ -53,17 +53,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   String? _observaciones;
   String? _audioFilePath;
 
-  // Configuración de hospital por defecto
-  static const String _hospitalPorDefecto = 'Departamental';
-  static const bool _mostrarSelectorHospital = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!_mostrarSelectorHospital) {
-      _hospital = _hospitalPorDefecto;
-    }
-  }
+  // CORRECCIÓN: Cambiar a true para mostrar el selector de hospital
+  static const bool _mostrarSelectorHospital = true;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +307,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   void _resetForm() {
     _formKey.currentState?.reset();
     setState(() {
-      _hospital = _hospitalPorDefecto;
+      // CORRECCIÓN: No establecer hospital por defecto, dejar que el usuario lo seleccione
+      _hospital = null;
       _consultorio = null;
       _estado = null;
       _focoAuscultacion = null;
@@ -391,6 +383,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
+              Text('• Hospital'),
               Text('• Consultorio'),
               Text('• Estado del sonido'),
               Text('• Foco de auscultación'),
