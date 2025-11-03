@@ -13,14 +13,16 @@ class FormAudioPicker extends StatefulWidget {
   });
 
   @override
-  State<FormAudioPicker> createState() => _FormAudioPickerState();
+  State<FormAudioPicker> createState() => FormAudioPickerState();
 }
 
-class _FormAudioPickerState extends State<FormAudioPicker> {
+// CORRECCIÓN: Quitar el guion bajo para hacerlo público
+class FormAudioPickerState extends State<FormAudioPicker> {
   String? _selectedFileName;
   String? _selectedFilePath;
   bool _isHovering = false;
 
+  // CORRECCIÓN: Hacer el método reset público
   void reset() {
     setState(() {
       _selectedFileName = null;

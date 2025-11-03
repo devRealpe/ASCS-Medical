@@ -1,4 +1,6 @@
 // lib/presentation/pages/formulario/widgets/form_fields.dart
+// SOLUCIÓN ÓPTIMA: Eliminar la sincronización bidireccional problemática
+
 import 'package:flutter/material.dart';
 import '../../../../domain/entities/config/medical_config.dart';
 import '../../../theme/medical_colors.dart';
@@ -38,10 +40,10 @@ class FormFields extends StatefulWidget {
   });
 
   @override
-  State<FormFields> createState() => _FormFieldsState();
+  State<FormFields> createState() => FormFieldsState();
 }
 
-class _FormFieldsState extends State<FormFields> {
+class FormFieldsState extends State<FormFields> {
   late TextEditingController _observacionesController;
 
   @override
@@ -49,20 +51,26 @@ class _FormFieldsState extends State<FormFields> {
     super.initState();
     _observacionesController =
         TextEditingController(text: widget.observaciones);
+
+    // Escuchar cambios del controlador y notificar al padre
+    _observacionesController.addListener(() {
+      widget.onObservacionesChanged(_observacionesController.text);
+    });
   }
 
-  @override
-  void didUpdateWidget(FormFields oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.observaciones != oldWidget.observaciones) {
-      _observacionesController.text = widget.observaciones ?? '';
-    }
-  }
+  // CORRECCIÓN: Eliminar didUpdateWidget para evitar el ciclo de sincronización
+  // Ya no necesitamos sincronizar desde el padre porque el controlador
+  // es la única fuente de verdad para este campo
 
   @override
   void dispose() {
     _observacionesController.dispose();
     super.dispose();
+  }
+
+  // Método público para limpiar el controlador desde el padre
+  void reset() {
+    _observacionesController.clear();
   }
 
   @override
@@ -416,7 +424,7 @@ class _FormFieldsState extends State<FormFields> {
         fillColor: Colors.grey[50],
         alignLabelWithHint: true,
       ),
-      onChanged: widget.onObservacionesChanged,
+      // CORRECCIÓN: Ya no necesitamos onChanged aquí porque usamos un listener
       maxLines: 4,
       minLines: 3,
       textCapitalization: TextCapitalization.sentences,

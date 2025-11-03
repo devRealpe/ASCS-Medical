@@ -45,6 +45,7 @@ class _FormularioPageView extends StatefulWidget {
 class _FormularioPageViewState extends State<_FormularioPageView> {
   final _formKey = GlobalKey<FormState>();
   final _audioPickerKey = GlobalKey<FormAudioPickerState>();
+  final _formFieldsKey = GlobalKey<FormFieldsState>();
 
   // Controllers de estado del formulario
   String? _hospital;
@@ -133,31 +134,31 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         child: Column(
           children: [
             FormFields(
-              config: config,
-              hospital: _hospital,
-              consultorio: _consultorio,
-              estado: _estado,
-              focoAuscultacion: _focoAuscultacion,
-              selectedDate: _selectedDate,
-              observaciones: _observaciones,
-              mostrarSelectorHospital: _mostrarSelectorHospital,
-              onHospitalChanged: _onHospitalChanged,
-              onConsultorioChanged: (value) {
-                setState(() => _consultorio = value);
-              },
-              onEstadoChanged: (value) {
-                setState(() => _estado = value);
-              },
-              onFocoChanged: (value) {
-                setState(() => _focoAuscultacion = value);
-              },
-              onDateChanged: (value) {
-                setState(() => _selectedDate = value);
-              },
-              onObservacionesChanged: (value) {
-                setState(() => _observaciones = value);
-              },
-            ),
+                key: _formFieldsKey,
+                config: config,
+                hospital: _hospital,
+                consultorio: _consultorio,
+                estado: _estado,
+                focoAuscultacion: _focoAuscultacion,
+                selectedDate: _selectedDate,
+                observaciones: _observaciones,
+                mostrarSelectorHospital: _mostrarSelectorHospital,
+                onHospitalChanged: _onHospitalChanged,
+                onConsultorioChanged: (value) {
+                  setState(() => _consultorio = value);
+                },
+                onEstadoChanged: (value) {
+                  setState(() => _estado = value);
+                },
+                onFocoChanged: (value) {
+                  setState(() => _focoAuscultacion = value);
+                },
+                onDateChanged: (value) {
+                  setState(() => _selectedDate = value);
+                },
+                onObservacionesChanged: (value) {
+                  _observaciones = value;
+                }),
             const SizedBox(height: 20),
             FormAudioPicker(
               key: _audioPickerKey,
@@ -310,6 +311,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     _formKey.currentState?.reset();
 
     _audioPickerKey.currentState?.reset();
+
+    _formFieldsKey.currentState?.reset();
     setState(() {
       // CORRECCIÓN: No establecer hospital por defecto, dejar que el usuario lo seleccione
       _hospital = null;
