@@ -21,6 +21,14 @@ class _FormAudioPickerState extends State<FormAudioPicker> {
   String? _selectedFilePath;
   bool _isHovering = false;
 
+  void reset() {
+    setState(() {
+      _selectedFileName = null;
+      _selectedFilePath = null;
+      _isHovering = false;
+    });
+  }
+
   Future<void> _pickAudioFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,

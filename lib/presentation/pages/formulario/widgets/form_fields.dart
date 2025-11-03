@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../domain/entities/config/medical_config.dart';
 import '../../../theme/medical_colors.dart';
 
-class FormFields extends StatelessWidget {
+class FormFields extends StatefulWidget {
   final MedicalConfig config;
   final String? hospital;
   final String? consultorio;
@@ -38,6 +38,34 @@ class FormFields extends StatelessWidget {
   });
 
   @override
+  State<FormFields> createState() => _FormFieldsState();
+}
+
+class _FormFieldsState extends State<FormFields> {
+  late TextEditingController _observacionesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _observacionesController =
+        TextEditingController(text: widget.observaciones);
+  }
+
+  @override
+  void didUpdateWidget(FormFields oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.observaciones != oldWidget.observaciones) {
+      _observacionesController.text = widget.observaciones ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _observacionesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
@@ -46,13 +74,13 @@ class FormFields extends StatelessWidget {
           title: 'Ubicación del paciente',
           icon: Icons.location_on,
           children: [
-            if (mostrarSelectorHospital) ...[
+            if (widget.mostrarSelectorHospital) ...[
               _buildDropdown(
                 label: 'Hospital',
                 icon: Icons.local_hospital,
-                items: config.hospitales.map((h) => h.nombre).toList(),
-                value: hospital,
-                onChanged: onHospitalChanged,
+                items: widget.config.hospitales.map((h) => h.nombre).toList(),
+                value: widget.hospital,
+                onChanged: widget.onHospitalChanged,
               ),
               const SizedBox(height: 20),
             ],
@@ -60,8 +88,8 @@ class FormFields extends StatelessWidget {
               label: 'Consultorio',
               icon: Icons.meeting_room,
               items: _getConsultoriosDisponibles(),
-              value: consultorio,
-              onChanged: onConsultorioChanged,
+              value: widget.consultorio,
+              onChanged: widget.onConsultorioChanged,
             ),
           ],
         ),
@@ -76,8 +104,8 @@ class FormFields extends StatelessWidget {
               label: 'Estado del sonido',
               icon: Icons.health_and_safety,
               items: const ['Normal', 'Anormal'],
-              value: estado,
-              onChanged: onEstadoChanged,
+              value: widget.estado,
+              onChanged: widget.onEstadoChanged,
             ),
             const SizedBox(height: 20),
             Row(
@@ -87,9 +115,9 @@ class FormFields extends StatelessWidget {
                   child: _buildDropdown(
                     label: 'Foco de auscultación',
                     icon: Icons.hearing,
-                    items: config.focos.map((f) => f.nombre).toList(),
-                    value: focoAuscultacion,
-                    onChanged: onFocoChanged,
+                    items: widget.config.focos.map((f) => f.nombre).toList(),
+                    value: widget.focoAuscultacion,
+                    onChanged: widget.onFocoChanged,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -274,7 +302,7 @@ class FormFields extends StatelessWidget {
             size: 20,
           ),
         ),
-        suffixIcon: selectedDate != null
+        suffixIcon: widget.selectedDate != null
             ? Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(4),
@@ -309,11 +337,12 @@ class FormFields extends StatelessWidget {
       readOnly: true,
       onTap: () => _selectDate(context),
       controller: TextEditingController(
-        text: selectedDate != null
-            ? '${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.year}'
+        text: widget.selectedDate != null
+            ? '${widget.selectedDate!.day.toString().padLeft(2, '0')}/${widget.selectedDate!.month.toString().padLeft(2, '0')}/${widget.selectedDate!.year}'
             : '',
       ),
-      validator: (v) => selectedDate == null ? 'Selecciona una fecha' : null,
+      validator: (v) =>
+          widget.selectedDate == null ? 'Selecciona una fecha' : null,
       style: const TextStyle(
         color: MedicalColors.textPrimary,
         fontSize: 15,
@@ -325,7 +354,7 @@ class FormFields extends StatelessWidget {
   Future<void> _selectDate(BuildContext context) async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? DateTime.now(),
+      initialDate: widget.selectedDate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -343,12 +372,13 @@ class FormFields extends StatelessWidget {
       },
     );
     if (pickedDate != null) {
-      onDateChanged(pickedDate);
+      widget.onDateChanged(pickedDate);
     }
   }
 
   Widget _buildObservacionesField() {
     return TextFormField(
+      controller: _observacionesController,
       decoration: InputDecoration(
         labelText: 'Diagnóstico (Opcional)',
         labelStyle: const TextStyle(
@@ -386,21 +416,20 @@ class FormFields extends StatelessWidget {
         fillColor: Colors.grey[50],
         alignLabelWithHint: true,
       ),
-      onChanged: onObservacionesChanged,
+      onChanged: widget.onObservacionesChanged,
       maxLines: 4,
       minLines: 3,
-      initialValue: observaciones,
       textCapitalization: TextCapitalization.sentences,
     );
   }
 
   List<String> _getConsultoriosDisponibles() {
-    if (hospital == null) return [];
+    if (widget.hospital == null) return [];
 
-    final hospitalEntity = config.getHospitalPorNombre(hospital!);
+    final hospitalEntity = widget.config.getHospitalPorNombre(widget.hospital!);
     if (hospitalEntity == null) return [];
 
-    return config
+    return widget.config
         .getConsultoriosPorHospital(hospitalEntity.codigo)
         .map((c) => c.nombre)
         .toList();

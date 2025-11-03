@@ -16,6 +16,7 @@ import '../../theme/medical_colors.dart';
 import 'widgets/form_header.dart';
 import 'widgets/form_fields.dart';
 import 'widgets/form_audio_picker.dart';
+
 import 'widgets/upload_overlay.dart';
 
 class FormularioPage extends StatelessWidget {
@@ -43,6 +44,7 @@ class _FormularioPageView extends StatefulWidget {
 
 class _FormularioPageViewState extends State<_FormularioPageView> {
   final _formKey = GlobalKey<FormState>();
+  final _audioPickerKey = GlobalKey<FormAudioPickerState>();
 
   // Controllers de estado del formulario
   String? _hospital;
@@ -53,7 +55,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   String? _observaciones;
   String? _audioFilePath;
 
-  // CORRECCIÓN: Cambiar a true para mostrar el selector de hospital
   static const bool _mostrarSelectorHospital = true;
 
   @override
@@ -159,6 +160,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             ),
             const SizedBox(height: 20),
             FormAudioPicker(
+              key: _audioPickerKey,
               onFileSelected: (filePath) {
                 setState(() => _audioFilePath = filePath);
               },
@@ -306,6 +308,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
   void _resetForm() {
     _formKey.currentState?.reset();
+
+    _audioPickerKey.currentState?.reset();
     setState(() {
       // CORRECCIÓN: No establecer hospital por defecto, dejar que el usuario lo seleccione
       _hospital = null;
