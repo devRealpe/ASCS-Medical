@@ -3,14 +3,6 @@
     {
       "nombre": "Departamental",
       "codigo": "01"
-    },
-    {
-      "nombre": "San Juan de Dios",
-      "codigo": "02"
-    },
-    {
-      "nombre": "General",
-      "codigo": "03"
     }
   ],
   "consultorios": [
@@ -25,19 +17,9 @@
       "codigo_hospital": "01"
     },
     {
-      "nombre": "201 C",
+      "nombre": "103 C",
       "codigo": "03",
-      "codigo_hospital": "02"
-    },
-    {
-      "nombre": "202 D",
-      "codigo": "04",
-      "codigo_hospital": "02"
-    },
-    {
-      "nombre": "301 E",
-      "codigo": "05",
-      "codigo_hospital": "03"
+      "codigo_hospital": "01"
     }
   ],
   "focos": [

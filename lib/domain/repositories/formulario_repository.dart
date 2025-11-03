@@ -1,14 +1,14 @@
 // lib/domain/repositories/formulario_repository.dart
-import 'dart:io';
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
+import '../../data/models/audio_file_wrapper.dart';
 import '../entities/formulario_completo.dart';
 
 abstract class FormularioRepository {
   /// Envía un formulario completo con audio a S3
   Future<Either<Failure, void>> enviarFormulario({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required AudioFileWrapper audioFile,
     void Function(double progress, String status)? onProgress,
   });
 

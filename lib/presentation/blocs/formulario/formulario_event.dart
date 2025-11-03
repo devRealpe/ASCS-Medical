@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:equatable/equatable.dart';
+import '../../../data/models/audio_file_wrapper.dart';
 
 abstract class FormularioEvent extends Equatable {
   const FormularioEvent();
@@ -21,7 +22,8 @@ class EnviarFormularioEvent extends FormularioEvent {
   final String focoAuscultacion;
   final String codigoFoco;
   final String? observaciones;
-  final File audioFile;
+  final File? audioFile; // Para móvil (retrocompatibilidad)
+  final AudioFileWrapper? audioFileWrapper; // Para web y móvil
 
   const EnviarFormularioEvent({
     required this.fechaNacimiento,
@@ -33,7 +35,8 @@ class EnviarFormularioEvent extends FormularioEvent {
     required this.focoAuscultacion,
     required this.codigoFoco,
     this.observaciones,
-    required this.audioFile,
+    this.audioFile,
+    this.audioFileWrapper,
   });
 
   @override
@@ -48,6 +51,7 @@ class EnviarFormularioEvent extends FormularioEvent {
         codigoFoco,
         observaciones,
         audioFile,
+        audioFileWrapper,
       ];
 }
 

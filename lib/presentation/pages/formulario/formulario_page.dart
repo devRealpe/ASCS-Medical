@@ -1,11 +1,11 @@
 // lib/presentation/pages/formulario/formulario_page.dart
-// VERSIÓN SIMPLIFICADA - La verificación de red ahora la hace el BLoC
+// VERSIÓN COMPATIBLE CON WEB
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/audio_file_wrapper.dart';
 import '../../../injection_container.dart' as di;
 import '../../blocs/config/config_bloc.dart';
 import '../../blocs/config/config_event.dart';
@@ -54,7 +54,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   String? _focoAuscultacion;
   DateTime? _selectedDate;
   String? _observaciones;
-  String? _audioFilePath;
+  AudioFileWrapper? _audioFile; // Cambiado a wrapper
 
   static const bool _mostrarSelectorHospital = true;
 
@@ -163,8 +163,17 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             const SizedBox(height: 20),
             FormAudioPicker(
               key: _audioPickerKey,
-              onFileSelected: (filePath) {
-                setState(() => _audioFilePath = filePath);
+              onFileSelected: (filePath, platformFile) {
+                if (platformFile != null) {
+                  setState(() {
+                    _audioFile = AudioFileWrapper(
+                      filePath: filePath,
+                      platformFile: platformFile,
+                      fileName: platformFile.name,
+                      size: platformFile.size,
+                    );
+                  });
+                }
               },
             ),
             const SizedBox(height: 32),
@@ -234,9 +243,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
-    // SIMPLIFICADO: Ya no verificamos conectividad aquí
-    // El BLoC se encarga de verificar REAL acceso a Internet
-
     // Validar formulario
     if (!_formKey.currentState!.validate()) {
       _showError(AppConstants.errorCamposIncompletos);
@@ -244,8 +250,21 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     }
 
     // Validar archivo de audio
-    if (_audioFilePath == null || !File(_audioFilePath!).existsSync()) {
+    if (_audioFile == null || !_audioFile!.isValid) {
       _showError(AppConstants.errorArchivoNoSeleccionado);
+      return;
+    }
+
+    // Validar extensión
+    if (!_audioFile!.hasValidExtension(AppConstants.allowedAudioExtensions)) {
+      _showError('Solo se permiten archivos .wav');
+      return;
+    }
+
+    // Validar tamaño
+    if (!_audioFile!.isValidSize(AppConstants.maxAudioFileSizeMB)) {
+      _showError(
+          'El archivo supera el tamaño máximo de ${AppConstants.maxAudioFileSizeMB} MB');
       return;
     }
 
@@ -272,7 +291,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
     if (!mounted) return;
 
-    // Enviar formulario - El BLoC verificará la conexión antes de proceder
+    // Enviar formulario con el wrapper
     context.read<FormularioBloc>().add(
           EnviarFormularioEvent(
             fechaNacimiento: _selectedDate!,
@@ -284,7 +303,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             focoAuscultacion: _focoAuscultacion!,
             codigoFoco: focoEntity.codigo,
             observaciones: _observaciones,
-            audioFile: File(_audioFilePath!),
+            audioFile: _audioFile!.getFile()!, // Para móvil
+            audioFileWrapper: _audioFile, // Para ambas plataformas
           ),
         );
   }
@@ -314,7 +334,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       _focoAuscultacion = null;
       _selectedDate = null;
       _observaciones = null;
-      _audioFilePath = null;
+      _audioFile = null;
     });
   }
 
@@ -332,7 +352,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         ),
         backgroundColor: MedicalColors.errorRed,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5), // Más tiempo para mensajes largos
+        duration: const Duration(seconds: 5),
       ),
     );
   }

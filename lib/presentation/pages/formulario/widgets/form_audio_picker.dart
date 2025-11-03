@@ -1,11 +1,11 @@
 // lib/presentation/pages/formulario/widgets/form_audio_picker.dart
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../theme/medical_colors.dart';
 
 class FormAudioPicker extends StatefulWidget {
-  final Function(String) onFileSelected;
+  final Function(String?, PlatformFile?) onFileSelected;
 
   const FormAudioPicker({
     super.key,
@@ -16,17 +16,17 @@ class FormAudioPicker extends StatefulWidget {
   State<FormAudioPicker> createState() => FormAudioPickerState();
 }
 
-// CORRECCIÓN: Quitar el guion bajo para hacerlo público
 class FormAudioPickerState extends State<FormAudioPicker> {
   String? _selectedFileName;
   String? _selectedFilePath;
+  PlatformFile? _selectedPlatformFile; // Para web
   bool _isHovering = false;
 
-  // CORRECCIÓN: Hacer el método reset público
   void reset() {
     setState(() {
       _selectedFileName = null;
       _selectedFilePath = null;
+      _selectedPlatformFile = null;
       _isHovering = false;
     });
   }
@@ -35,21 +35,27 @@ class FormAudioPickerState extends State<FormAudioPicker> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['wav'],
+      withData: kIsWeb, // En web, necesitamos los bytes
     );
 
     if (result != null && result.files.isNotEmpty) {
+      final file = result.files.single;
+
       setState(() {
-        _selectedFileName = result.files.single.name;
-        _selectedFilePath = result.files.single.path;
+        _selectedFileName = file.name;
+        _selectedFilePath = file.path; // Puede ser null en web
+        _selectedPlatformFile = file;
       });
-      widget.onFileSelected(_selectedFilePath!);
+
+      // Notificar al padre con ambos valores
+      widget.onFileSelected(_selectedFilePath, _selectedPlatformFile);
     }
   }
 
   String _getFileSize() {
-    if (_selectedFilePath == null) return '';
-    final file = File(_selectedFilePath!);
-    final bytes = file.lengthSync();
+    if (_selectedPlatformFile == null) return '';
+
+    final bytes = _selectedPlatformFile!.size;
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) {
       return '${(bytes / 1024).toStringAsFixed(1)} KB';

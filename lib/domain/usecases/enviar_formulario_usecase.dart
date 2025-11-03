@@ -1,8 +1,8 @@
 // lib/domain/usecases/enviar_formulario_usecase.dart
 
-import 'dart:io';
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
+import '../../data/models/audio_file_wrapper.dart';
 import '../entities/formulario_completo.dart';
 import '../repositories/formulario_repository.dart';
 
@@ -15,11 +15,11 @@ class EnviarFormularioUseCase {
   /// Ejecuta el caso de uso
   ///
   /// [formulario] El formulario completo a enviar
-  /// [audioFile] El archivo de audio físico
+  /// [audioFile] El archivo de audio (wrapper para web/móvil)
   /// [onProgress] Callback opcional para reportar progreso
   Future<Either<Failure, void>> call({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required AudioFileWrapper audioFile,
     void Function(double progress, String status)? onProgress,
   }) async {
     return await repository.enviarFormulario(

@@ -1,5 +1,5 @@
 // lib/presentation/blocs/formulario/formulario_bloc.dart
-// VERSIÓN MEJORADA con verificación real de Internet
+// VERSIÓN MEJORADA con soporte WEB
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/network/network_info.dart';
@@ -55,7 +55,6 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         status:
             'Conexión detectada pero es muy lenta. Esto puede tomar tiempo...',
       ));
-      // Pequeña pausa para que el usuario lea el mensaje
       await Future.delayed(const Duration(seconds: 2));
     } else if (quality == ConnectionQuality.poor) {
       emit(const FormularioEnviando(
@@ -65,7 +64,16 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       await Future.delayed(const Duration(seconds: 1));
     }
 
-    // 3. Generar nombre de archivo
+    // 3. Verificar que tenemos el archivo (wrapper)
+    final audioWrapper = event.audioFileWrapper;
+    if (audioWrapper == null || !audioWrapper.isValid) {
+      emit(const FormularioError(
+        mensaje: 'El archivo de audio no es válido o no se pudo cargar',
+      ));
+      return;
+    }
+
+    // 4. Generar nombre de archivo
     emit(const FormularioEnviando(
       progress: 0.05,
       status: 'Generando nombre de archivo...',
@@ -79,17 +87,16 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       observaciones: event.observaciones,
     );
 
-    // Verificar si hubo error en la generación del nombre
     await nombreArchivoResult.fold(
       (failure) async {
         emit(FormularioError(mensaje: failure.message));
       },
       (fileName) async {
-        // 4. Calcular edad
+        // 5. Calcular edad
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
 
-        // 5. Crear metadata
+        // 6. Crear metadata
         final metadata = AudioMetadata(
           fechaNacimiento: event.fechaNacimiento,
           edad: edad,
@@ -105,30 +112,27 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
           observaciones: event.observaciones,
         );
 
-        // 6. Crear formulario completo
+        // 7. Crear formulario completo
         final formulario = FormularioCompleto(
           metadata: metadata,
           fileName: fileName,
         );
 
-        // 7. Enviar formulario (con reintentos automáticos en el datasource)
+        // 8. Enviar formulario usando el wrapper
         final result = await enviarFormularioUseCase(
           formulario: formulario,
-          audioFile: event.audioFile,
+          audioFile: audioWrapper,
           onProgress: (progress, status) {
             emit(FormularioEnviando(
-              progress: 0.05 +
-                  (progress *
-                      0.95), // Reservamos 5% para verificaciones iniciales
+              progress: 0.05 + (progress * 0.95),
               status: status,
             ));
           },
         );
 
-        // 8. Emitir resultado final
+        // 9. Emitir resultado final
         result.fold(
           (failure) {
-            // Mensajes de error más descriptivos según el tipo de fallo
             String errorMessage = failure.message;
 
             if (failure.message.toLowerCase().contains('conexión') ||

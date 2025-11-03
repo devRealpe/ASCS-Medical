@@ -1,5 +1,5 @@
 // lib/data/repositories/formulario_repository_impl.dart
-import 'dart:io';
+// COMPATIBLE CON WEB
 import 'package:dartz/dartz.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
@@ -7,6 +7,7 @@ import '../../domain/entities/formulario_completo.dart';
 import '../../domain/repositories/formulario_repository.dart';
 import '../datasources/remote/aws_s3_remote_datasource.dart';
 import '../models/audio_metadata_model.dart';
+import '../models/audio_file_wrapper.dart';
 
 class FormularioRepositoryImpl implements FormularioRepository {
   final AwsS3RemoteDataSource remoteDataSource;
@@ -16,7 +17,7 @@ class FormularioRepositoryImpl implements FormularioRepository {
   @override
   Future<Either<Failure, void>> enviarFormulario({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required AudioFileWrapper audioFile,
     void Function(double progress, String status)? onProgress,
   }) async {
     try {
@@ -80,7 +81,7 @@ class FormularioRepositoryImpl implements FormularioRepository {
     required String codigoConsultorio,
     required String codigoHospital,
     required String codigoFoco,
-    String? observaciones, // CORRECCIÓN: opcional en lugar de requerido
+    String? observaciones,
   }) async {
     try {
       final ahora = DateTime.now();
@@ -92,13 +93,11 @@ class FormularioRepositoryImpl implements FormularioRepository {
       final mes = twoDigits(ahora.month);
       final anio = twoDigits(ahora.year % 100);
 
-      // Obtener siguiente ID de audio
       final audioId = await remoteDataSource.obtenerSiguienteAudioId();
 
       final edadStr = twoDigits(edad);
       final obsStr = (observaciones?.isNotEmpty ?? false) ? '01' : '00';
 
-      // Formato: DDMMAA-CCHH-FF-AAAA-EEOO.wav
       final fileName =
           '$dia$mes$anio-$codigoConsultorio$codigoHospital-$codigoFoco-$audioId-$edadStr$obsStr.wav';
 

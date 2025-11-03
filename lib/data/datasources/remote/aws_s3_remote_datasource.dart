@@ -1,19 +1,22 @@
 // lib/data/datasources/remote/aws_s3_remote_datasource.dart
-// VERSIÓN MEJORADA con timeouts, reintentos y mejor manejo de errores
+// VERSIÓN MEJORADA con soporte WEB
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:amplify_flutter/amplify_flutter.dart'
     hide StorageException, NetworkException;
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../models/audio_file_wrapper.dart';
 
 /// Contrato para el data source remoto de AWS S3
 abstract class AwsS3RemoteDataSource {
   Future<String> subirAudio({
-    required File audioFile,
+    required AudioFileWrapper audioFile,
     required String fileName,
     void Function(double progress)? onProgress,
   });
@@ -29,17 +32,14 @@ abstract class AwsS3RemoteDataSource {
 
 /// Implementación del data source remoto usando AWS Amplify S3
 class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
-  // Configuración de reintentos
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 2);
-
-  // Timeouts
   static const Duration _uploadTimeout = Duration(minutes: 5);
   static const Duration _listTimeout = Duration(seconds: 30);
 
   @override
   Future<String> subirAudio({
-    required File audioFile,
+    required AudioFileWrapper audioFile,
     required String fileName,
     void Function(double progress)? onProgress,
   }) async {
@@ -66,11 +66,10 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
     return await _executeWithRetry(
       operation: _obtenerSiguienteAudioIdOperation,
       operationName: 'obtener ID de audio',
-      maxRetries: 2, // Menos reintentos para operaciones de lectura
+      maxRetries: 2,
     );
   }
 
-  /// Ejecuta una operación con estrategia de reintentos
   Future<T> _executeWithRetry<T>({
     required Future<T> Function() operation,
     required String operationName,
@@ -98,7 +97,6 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
         }
         await Future.delayed(_retryDelay * attempts);
       } on AmplifyException catch (e) {
-        // Analizar el tipo de error de Amplify
         if (_isNetworkError(e)) {
           attempts++;
           if (attempts >= maxRetries) {
@@ -108,12 +106,10 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
           }
           await Future.delayed(_retryDelay * attempts);
         } else if (_isAuthError(e)) {
-          // No reintentar errores de autenticación
           throw StorageException(
             'Error de autenticación al $operationName: ${e.message}',
           );
         } else if (_isStorageError(e)) {
-          // No reintentar errores de almacenamiento (archivo no existe, etc.)
           throw StorageException(
             'Error de almacenamiento al $operationName: ${e.message}',
           );
@@ -132,51 +128,85 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
     throw NetworkException('Máximo de reintentos alcanzado al $operationName');
   }
 
-  /// Operación real de subida de audio
+  /// Operación real de subida de audio (Compatible con WEB y MÓVIL)
   Future<String> _uploadAudioOperation(
-    File audioFile,
+    AudioFileWrapper audioFile,
     String fileName,
     void Function(double progress)? onProgress,
   ) async {
-    // Validar que el archivo existe
-    if (!audioFile.existsSync()) {
-      throw const FileException('El archivo de audio no existe');
+    // Validar que el archivo es válido
+    if (!audioFile.isValid) {
+      throw const FileException('El archivo de audio no es válido');
     }
 
-    // Validar tamaño del archivo
-    final fileSize = audioFile.lengthSync();
-    final fileSizeMB = fileSize / (1024 * 1024);
-    if (fileSizeMB > AppConstants.maxAudioFileSizeMB) {
+    // Validar tamaño
+    if (!audioFile.isValidSize(AppConstants.maxAudioFileSizeMB)) {
+      final fileSizeMB = audioFile.size / (1024 * 1024);
       throw FileException(
         'El archivo es demasiado grande (${fileSizeMB.toStringAsFixed(1)} MB). '
         'Máximo permitido: ${AppConstants.maxAudioFileSizeMB} MB',
       );
     }
 
-    // Ruta en S3
     final s3Path = '${AppConstants.s3AudioPrefix}$fileName';
 
-    // Subir archivo con timeout
-    final uploadOperation = Amplify.Storage.uploadFile(
-      localFile: AWSFile.fromPath(audioFile.path),
-      path: StoragePath.fromString(s3Path),
-      onProgress: (uploadProgress) {
-        final fraction =
-            uploadProgress.transferredBytes / uploadProgress.totalBytes;
-        onProgress?.call(fraction);
-      },
-    );
+    // IMPORTANTE: Diferente approach para web vs móvil
+    if (kIsWeb) {
+      // EN WEB: Usar bytes directamente
+      final bytes = await audioFile.getBytes();
 
-    // Aplicar timeout
-    await uploadOperation.result.timeout(
-      _uploadTimeout,
-      onTimeout: () {
-        throw TimeoutException(
-          'Tiempo de espera agotado al subir audio',
-          _uploadTimeout,
-        );
-      },
-    );
+      final uploadOperation = Amplify.Storage.uploadData(
+        data: StorageDataPayload.bytes(bytes),
+        path: StoragePath.fromString(s3Path),
+        options: StorageUploadDataOptions(
+          metadata: {
+            'Content-Type': 'audio/wav',
+            'originalFileName': audioFile.fileName,
+          },
+        ),
+        onProgress: (uploadProgress) {
+          final fraction =
+              uploadProgress.transferredBytes / uploadProgress.totalBytes;
+          onProgress?.call(fraction);
+        },
+      );
+
+      await uploadOperation.result.timeout(
+        _uploadTimeout,
+        onTimeout: () {
+          throw TimeoutException(
+            'Tiempo de espera agotado al subir audio',
+            _uploadTimeout,
+          );
+        },
+      );
+    } else {
+      // EN MÓVIL: Usar archivo físico
+      final file = audioFile.getFile();
+      if (file == null || !file.existsSync()) {
+        throw const FileException('El archivo no existe en el sistema');
+      }
+
+      final uploadOperation = Amplify.Storage.uploadFile(
+        localFile: AWSFile.fromPath(file.path),
+        path: StoragePath.fromString(s3Path),
+        onProgress: (uploadProgress) {
+          final fraction =
+              uploadProgress.transferredBytes / uploadProgress.totalBytes;
+          onProgress?.call(fraction);
+        },
+      );
+
+      await uploadOperation.result.timeout(
+        _uploadTimeout,
+        onTimeout: () {
+          throw TimeoutException(
+            'Tiempo de espera agotado al subir audio',
+            _uploadTimeout,
+          );
+        },
+      );
+    }
 
     // Construir URL pública
     final audioUrl =
@@ -185,24 +215,26 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
     return audioUrl;
   }
 
-  /// Operación real de subida de metadata
+  /// Operación real de subida de metadata (Compatible con WEB)
   Future<void> _uploadMetadataOperation(
     Map<String, dynamic> metadata,
     String fileName,
     void Function(double progress)? onProgress,
   ) async {
-    // Crear archivo JSON temporal
-    final jsonFile = await _createTempJsonFile(metadata, fileName);
+    final fileNameWithoutExt = fileName.replaceAll('.wav', '');
+    final s3Path = '${AppConstants.s3JsonPrefix}$fileNameWithoutExt.json';
+    final jsonBytes = utf8.encode(jsonEncode(metadata));
 
-    try {
-      // Ruta en S3 (sin extensión .wav, agregamos .json)
-      final fileNameWithoutExt = fileName.replaceAll('.wav', '');
-      final s3Path = '${AppConstants.s3JsonPrefix}$fileNameWithoutExt.json';
-
-      // Subir archivo JSON con timeout
-      final uploadOperation = Amplify.Storage.uploadFile(
-        localFile: AWSFile.fromPath(jsonFile.path),
+    if (kIsWeb) {
+      // EN WEB: Subir directamente desde bytes
+      final uploadOperation = Amplify.Storage.uploadData(
+        data: StorageDataPayload.bytes(Uint8List.fromList(jsonBytes)),
         path: StoragePath.fromString(s3Path),
+        options: StorageUploadDataOptions(
+          metadata: {
+            'Content-Type': 'application/json',
+          },
+        ),
         onProgress: (uploadProgress) {
           final fraction =
               uploadProgress.transferredBytes / uploadProgress.totalBytes;
@@ -219,17 +251,39 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
           );
         },
       );
-    } finally {
-      // Eliminar archivo temporal siempre
-      if (await jsonFile.exists()) {
-        await jsonFile.delete();
+    } else {
+      // EN MÓVIL: Crear archivo temporal
+      final jsonFile = await _createTempJsonFile(metadata, fileName);
+
+      try {
+        final uploadOperation = Amplify.Storage.uploadFile(
+          localFile: AWSFile.fromPath(jsonFile.path),
+          path: StoragePath.fromString(s3Path),
+          onProgress: (uploadProgress) {
+            final fraction =
+                uploadProgress.transferredBytes / uploadProgress.totalBytes;
+            onProgress?.call(fraction);
+          },
+        );
+
+        await uploadOperation.result.timeout(
+          _uploadTimeout,
+          onTimeout: () {
+            throw TimeoutException(
+              'Tiempo de espera agotado al subir metadata',
+              _uploadTimeout,
+            );
+          },
+        );
+      } finally {
+        if (await jsonFile.exists()) {
+          await jsonFile.delete();
+        }
       }
     }
   }
 
-  /// Operación real de obtener siguiente ID
   Future<String> _obtenerSiguienteAudioIdOperation() async {
-    // Listar archivos en la carpeta de audios con timeout
     final result = await Amplify.Storage.list(
       path: StoragePath.fromString(AppConstants.s3AudioPrefix),
       options: const StorageListOptions(
@@ -245,15 +299,12 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
       },
     );
 
-    // Contar archivos y calcular siguiente ID
     final count = result.items.length;
     final nextId = count + 1;
 
-    // Formatear con padding según configuración
     return nextId.toString().padLeft(AppConstants.audioIdPadding, '0');
   }
 
-  /// Crea un archivo JSON temporal
   Future<File> _createTempJsonFile(
     Map<String, dynamic> jsonData,
     String fileName,
@@ -274,7 +325,6 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
     }
   }
 
-  /// Determina si un error de Amplify es de red
   bool _isNetworkError(AmplifyException e) {
     final message = e.message.toLowerCase();
     return message.contains('network') ||
@@ -284,7 +334,6 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
         message.contains('socket');
   }
 
-  /// Determina si un error de Amplify es de autenticación
   bool _isAuthError(AmplifyException e) {
     final message = e.message.toLowerCase();
     return message.contains('auth') ||
@@ -293,7 +342,6 @@ class AwsS3RemoteDataSourceImpl implements AwsS3RemoteDataSource {
         message.contains('unauthorized');
   }
 
-  /// Determina si un error de Amplify es de almacenamiento
   bool _isStorageError(AmplifyException e) {
     final message = e.message.toLowerCase();
     return message.contains('not found') ||
