@@ -1,8 +1,9 @@
 // lib/presentation/pages/formulario/formulario_page.dart
+// VERSIÓN SIMPLIFICADA - La verificación de red ahora la hace el BLoC
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../injection_container.dart' as di;
@@ -16,7 +17,6 @@ import '../../theme/medical_colors.dart';
 import 'widgets/form_header.dart';
 import 'widgets/form_fields.dart';
 import 'widgets/form_audio_picker.dart';
-
 import 'widgets/upload_overlay.dart';
 
 class FormularioPage extends StatelessWidget {
@@ -134,31 +134,32 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         child: Column(
           children: [
             FormFields(
-                key: _formFieldsKey,
-                config: config,
-                hospital: _hospital,
-                consultorio: _consultorio,
-                estado: _estado,
-                focoAuscultacion: _focoAuscultacion,
-                selectedDate: _selectedDate,
-                observaciones: _observaciones,
-                mostrarSelectorHospital: _mostrarSelectorHospital,
-                onHospitalChanged: _onHospitalChanged,
-                onConsultorioChanged: (value) {
-                  setState(() => _consultorio = value);
-                },
-                onEstadoChanged: (value) {
-                  setState(() => _estado = value);
-                },
-                onFocoChanged: (value) {
-                  setState(() => _focoAuscultacion = value);
-                },
-                onDateChanged: (value) {
-                  setState(() => _selectedDate = value);
-                },
-                onObservacionesChanged: (value) {
-                  _observaciones = value;
-                }),
+              key: _formFieldsKey,
+              config: config,
+              hospital: _hospital,
+              consultorio: _consultorio,
+              estado: _estado,
+              focoAuscultacion: _focoAuscultacion,
+              selectedDate: _selectedDate,
+              observaciones: _observaciones,
+              mostrarSelectorHospital: _mostrarSelectorHospital,
+              onHospitalChanged: _onHospitalChanged,
+              onConsultorioChanged: (value) {
+                setState(() => _consultorio = value);
+              },
+              onEstadoChanged: (value) {
+                setState(() => _estado = value);
+              },
+              onFocoChanged: (value) {
+                setState(() => _focoAuscultacion = value);
+              },
+              onDateChanged: (value) {
+                setState(() => _selectedDate = value);
+              },
+              onObservacionesChanged: (value) {
+                _observaciones = value;
+              },
+            ),
             const SizedBox(height: 20),
             FormAudioPicker(
               key: _audioPickerKey,
@@ -178,7 +179,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   void _onHospitalChanged(String? value) {
     setState(() {
       _hospital = value;
-      _consultorio = null; // Resetear consultorio al cambiar hospital
+      _consultorio = null;
     });
 
     if (value != null && mounted) {
@@ -233,12 +234,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
-    // Verificar conexión
-    final connectivityResults = await Connectivity().checkConnectivity();
-    if (connectivityResults.contains(ConnectivityResult.none)) {
-      _showError(AppConstants.errorNoInternet);
-      return;
-    }
+    // SIMPLIFICADO: Ya no verificamos conectividad aquí
+    // El BLoC se encarga de verificar REAL acceso a Internet
 
     // Validar formulario
     if (!_formKey.currentState!.validate()) {
@@ -252,7 +249,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       return;
     }
 
-    // Verificar que el widget sigue montado antes de usar context
     if (!mounted) return;
 
     // Obtener códigos de la configuración
@@ -274,10 +270,9 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       return;
     }
 
-    // Verificar que el widget sigue montado antes de enviar
     if (!mounted) return;
 
-    // Enviar formulario
+    // Enviar formulario - El BLoC verificará la conexión antes de proceder
     context.read<FormularioBloc>().add(
           EnviarFormularioEvent(
             fechaNacimiento: _selectedDate!,
@@ -309,12 +304,10 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
   void _resetForm() {
     _formKey.currentState?.reset();
-
     _audioPickerKey.currentState?.reset();
-
     _formFieldsKey.currentState?.reset();
+
     setState(() {
-      // CORRECCIÓN: No establecer hospital por defecto, dejar que el usuario lo seleccione
       _hospital = null;
       _consultorio = null;
       _estado = null;
@@ -339,6 +332,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         ),
         backgroundColor: MedicalColors.errorRed,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5), // Más tiempo para mensajes largos
       ),
     );
   }
@@ -403,6 +397,16 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               ),
               SizedBox(height: 8),
               Text('• Diagnóstico u observaciones'),
+              SizedBox(height: 16),
+              Text(
+                '⚠️ Importante:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.orange),
+              ),
+              SizedBox(height: 8),
+              Text('• Se requiere conexión a Internet estable'),
+              Text('• Los archivos pueden tardar en subirse'),
+              Text('• No cierres la app durante la subida'),
             ],
           ),
         ),

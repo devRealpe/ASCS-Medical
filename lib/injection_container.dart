@@ -1,6 +1,12 @@
 // lib/injection_container.dart
+// ACTUALIZADO con NetworkInfo
+
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+// Core
+import 'core/network/network_info.dart';
 
 // Data Sources
 import 'data/datasources/local/config_local_datasource.dart';
@@ -28,6 +34,16 @@ final sl = GetIt.instance;
 
 /// Inicializa todas las dependencias de la aplicación
 Future<void> init() async {
+  //! Core
+
+  // Network Info
+  sl.registerLazySingleton<NetworkInfo>(
+    () => NetworkInfoImpl(
+      connectivity: sl(),
+      httpClient: sl(),
+    ),
+  );
+
   //! Features - Config
 
   // BLoC
@@ -62,6 +78,7 @@ Future<void> init() async {
     () => FormularioBloc(
       enviarFormularioUseCase: sl(),
       generarNombreArchivoUseCase: sl(),
+      networkInfo: sl(), // Inyectamos NetworkInfo
     ),
   );
 
@@ -81,9 +98,9 @@ Future<void> init() async {
     () => AwsS3RemoteDataSourceImpl(),
   );
 
-  //! Core
-  // (Actualmente no hay dependencias core para registrar)
-
-  //! External
+  // HTTP Client
   sl.registerLazySingleton(() => http.Client());
+
+  // Connectivity
+  sl.registerLazySingleton(() => Connectivity());
 }

@@ -1,6 +1,8 @@
 // lib/presentation/blocs/formulario/formulario_bloc.dart
+// VERSIÓN MEJORADA con verificación real de Internet
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/network/network_info.dart';
 import '../../../domain/entities/audio_metadata.dart';
 import '../../../domain/entities/formulario_completo.dart';
 import '../../../domain/usecases/enviar_formulario_usecase.dart';
@@ -11,10 +13,12 @@ import 'formulario_state.dart';
 class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
   final EnviarFormularioUseCase enviarFormularioUseCase;
   final GenerarNombreArchivoUseCase generarNombreArchivoUseCase;
+  final NetworkInfo networkInfo;
 
   FormularioBloc({
     required this.enviarFormularioUseCase,
     required this.generarNombreArchivoUseCase,
+    required this.networkInfo,
   }) : super(FormularioInitial()) {
     on<EnviarFormularioEvent>(_onEnviarFormulario);
     on<ResetFormularioEvent>(_onResetFormulario);
@@ -24,12 +28,49 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     EnviarFormularioEvent event,
     Emitter<FormularioState> emit,
   ) async {
+    // 1. Verificar conectividad REAL antes de iniciar
     emit(const FormularioEnviando(
       progress: 0.0,
+      status: 'Verificando conexión a Internet...',
+    ));
+
+    final hasConnection = await networkInfo.isConnected;
+
+    if (!hasConnection) {
+      emit(const FormularioError(
+        mensaje: 'No hay conexión a Internet. Por favor, verifica:\n'
+            '• Que estés conectado a WiFi o datos móviles\n'
+            '• Que tu conexión tenga acceso a Internet\n'
+            '• Que no estés en modo avión',
+      ));
+      return;
+    }
+
+    // 2. Verificar calidad de conexión
+    final quality = await networkInfo.connectionQuality;
+
+    if (quality == ConnectionQuality.veryPoor) {
+      emit(const FormularioEnviando(
+        progress: 0.0,
+        status:
+            'Conexión detectada pero es muy lenta. Esto puede tomar tiempo...',
+      ));
+      // Pequeña pausa para que el usuario lea el mensaje
+      await Future.delayed(const Duration(seconds: 2));
+    } else if (quality == ConnectionQuality.poor) {
+      emit(const FormularioEnviando(
+        progress: 0.0,
+        status: 'Conexión lenta detectada. Ten paciencia...',
+      ));
+      await Future.delayed(const Duration(seconds: 1));
+    }
+
+    // 3. Generar nombre de archivo
+    emit(const FormularioEnviando(
+      progress: 0.05,
       status: 'Generando nombre de archivo...',
     ));
 
-    // 1. Generar nombre de archivo
     final nombreArchivoResult = await generarNombreArchivoUseCase(
       fechaNacimiento: event.fechaNacimiento,
       codigoConsultorio: event.codigoConsultorio,
@@ -44,11 +85,11 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         emit(FormularioError(mensaje: failure.message));
       },
       (fileName) async {
-        // 2. Calcular edad
+        // 4. Calcular edad
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
 
-        // 3. Crear metadata (sin URL del audio por ahora, se actualizará en el repository)
+        // 5. Crear metadata
         final metadata = AudioMetadata(
           fechaNacimiento: event.fechaNacimiento,
           edad: edad,
@@ -64,27 +105,50 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
           observaciones: event.observaciones,
         );
 
-        // 4. Crear formulario completo
+        // 6. Crear formulario completo
         final formulario = FormularioCompleto(
           metadata: metadata,
           fileName: fileName,
         );
 
-        // 5. Enviar formulario
+        // 7. Enviar formulario (con reintentos automáticos en el datasource)
         final result = await enviarFormularioUseCase(
           formulario: formulario,
           audioFile: event.audioFile,
           onProgress: (progress, status) {
             emit(FormularioEnviando(
-              progress: progress,
+              progress: 0.05 +
+                  (progress *
+                      0.95), // Reservamos 5% para verificaciones iniciales
               status: status,
             ));
           },
         );
 
-        // 6. Emitir resultado final
+        // 8. Emitir resultado final
         result.fold(
-          (failure) => emit(FormularioError(mensaje: failure.message)),
+          (failure) {
+            // Mensajes de error más descriptivos según el tipo de fallo
+            String errorMessage = failure.message;
+
+            if (failure.message.toLowerCase().contains('conexión') ||
+                failure.message.toLowerCase().contains('network')) {
+              errorMessage = 'Error de conexión:\n${failure.message}\n\n'
+                  'Sugerencias:\n'
+                  '• Verifica tu conexión a Internet\n'
+                  '• Intenta acercarte a tu router WiFi\n'
+                  '• Si usas datos móviles, verifica tu señal';
+            } else if (failure.message.toLowerCase().contains('tiempo')) {
+              errorMessage =
+                  'La operación tomó demasiado tiempo:\n${failure.message}\n\n'
+                  'Tu conexión puede ser muy lenta. Intenta:\n'
+                  '• Conectarte a una red WiFi más rápida\n'
+                  '• Verificar que no haya otras descargas activas\n'
+                  '• Intentar nuevamente más tarde';
+            }
+
+            emit(FormularioError(mensaje: errorMessage));
+          },
           (_) => emit(const FormularioEnviadoExitosamente()),
         );
       },
