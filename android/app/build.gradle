@@ -15,7 +15,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = "11"
     }
 
     defaultConfig {
@@ -24,7 +24,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        minSdkVersion 24 // Update this line
+        minSdkVersion 24 
         targetSdkVersion 33
 
         // Configuración para OAuth de Google
@@ -36,7 +36,7 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
-            // Optimizaciones para producción (opcional)
+            // Optimizaciones para producción 
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -53,7 +53,7 @@ flutter {
     source = "../.."
 }
 
-// Añade esta sección para Firebase (opcional pero recomendado)
+
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.8.0')
     implementation 'com.google.firebase:firebase-analytics'

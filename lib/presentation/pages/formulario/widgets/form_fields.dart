@@ -1,6 +1,3 @@
-// lib/presentation/pages/formulario/widgets/form_fields.dart
-// SOLUCIÓN ÓPTIMA: Eliminar la sincronización bidireccional problemática
-
 import 'package:flutter/material.dart';
 import '../../../../domain/entities/config/medical_config.dart';
 import '../../../theme/medical_colors.dart';
@@ -234,7 +231,7 @@ class FormFieldsState extends State<FormFields> {
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(
