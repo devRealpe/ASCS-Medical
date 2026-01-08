@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.app_ascs"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,17 +15,15 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "1.8"  
     }
 
     defaultConfig {
         applicationId = "com.example.app_ascs"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24 
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        minSdkVersion 24 
-        targetSdkVersion 33
 
         // Configuración para OAuth de Google
         manifestPlaceholders += [
@@ -52,7 +50,6 @@ android {
 flutter {
     source = "../.."
 }
-
 
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.8.0')
