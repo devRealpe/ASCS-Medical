@@ -47,6 +47,11 @@ class FormularioRepositoryImpl implements FormularioRepository {
         focoAuscultacion: formulario.metadata.focoAuscultacion,
         codigoFoco: formulario.metadata.codigoFoco,
         observaciones: formulario.metadata.observaciones,
+        genero: formulario.metadata.genero,
+        pesoCkg: formulario.metadata.pesoCkg,
+        alturaCm: formulario.metadata.alturaCm,
+        categoriaAnomalia: formulario.metadata.categoriaAnomalia,
+        codigoCategoriaAnomalia: formulario.metadata.codigoCategoriaAnomalia,
       );
 
       // 3. Subir archivo JSON con metadata
@@ -80,31 +85,35 @@ class FormularioRepositoryImpl implements FormularioRepository {
     required String codigoConsultorio,
     required String codigoHospital,
     required String codigoFoco,
-    String? observaciones, // CORRECCIÓN: opcional en lugar de requerido
+    required String estado,
+    String? observaciones,
   }) async {
     try {
       final ahora = DateTime.now();
-      final edad = ahora.difference(fechaNacimiento).inDays ~/ 365;
 
-      String twoDigits(int n) => n.toString().padLeft(2, '0');
+      // Formato YYYYMMDD
+      final anio = ahora.year.toString();
+      final mes = ahora.month.toString().padLeft(2, '0');
+      final dia = ahora.day.toString().padLeft(2, '0');
+      final fechaStr = '$anio$mes$dia';
 
-      final dia = twoDigits(ahora.day);
-      final mes = twoDigits(ahora.month);
-      final anio = twoDigits(ahora.year % 100);
+      // Estado: N (Normal) o A (Anormal)
+      final estStr = estado.toLowerCase() == 'normal' ? 'N' : 'A';
 
-      // Obtener siguiente ID de audio
-      final audioId = await remoteDataSource.obtenerSiguienteAudioId();
+      // UUID único verificado contra S3
+      final audioId = await remoteDataSource.generarAudioIdUnico();
 
-      final edadStr = twoDigits(edad);
-      final obsStr = (observaciones?.isNotEmpty ?? false) ? '01' : '00';
-
-      // Formato: DDMMAA-CCHH-FF-AAAA-EEOO.wav
-      final fileName =
-          '$dia$mes$anio-$codigoConsultorio$codigoHospital-$codigoFoco-$audioId-$edadStr$obsStr.wav';
+      // Formato: SC_YYYYMMDD_HHCC_FF_EST_AAAA.wav
+      final fileName = 'SC_${fechaStr}_$codigoHospital$codigoConsultorio'
+          '_$codigoFoco'
+          '_${estStr}'
+          '_$audioId.wav';
 
       return Right(fileName);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
     } catch (e) {
       return Left(UnexpectedFailure(e.toString()));
     }

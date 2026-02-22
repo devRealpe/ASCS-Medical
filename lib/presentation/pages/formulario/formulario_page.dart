@@ -1,5 +1,4 @@
 // lib/presentation/pages/formulario/formulario_page.dart
-// VERSIÓN SIMPLIFICADA - La verificación de red ahora la hace el BLoC
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -47,7 +46,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   final _audioPickerKey = GlobalKey<FormAudioPickerState>();
   final _formFieldsKey = GlobalKey<FormFieldsState>();
 
-  // Controllers de estado del formulario
+  // Estado del formulario
   String? _hospital;
   String? _consultorio;
   String? _estado;
@@ -55,6 +54,12 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   DateTime? _selectedDate;
   String? _observaciones;
   String? _audioFilePath;
+
+  // Nuevos campos
+  String? _genero;
+  double? _pesoCkg;
+  double? _alturaCm;
+  String? _categoriaAnomalia;
 
   static const bool _mostrarSelectorHospital = true;
 
@@ -86,9 +91,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return FormHeader(
-      onInfoPressed: () => _showInfoDialog(context),
-    );
+    return FormHeader(onInfoPressed: () => _showInfoDialog(context));
   }
 
   Widget _buildFormContent(BuildContext context, ConfigState configState) {
@@ -103,17 +106,14 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
           children: [
             Icon(Icons.error_outline, size: 64, color: MedicalColors.errorRed),
             const SizedBox(height: 16),
-            Text(
-              'Error al cargar configuración',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
+            Text('Error al cargar configuración',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(configState.message),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                context.read<ConfigBloc>().add(CargarConfiguracionEvent());
-              },
+              onPressed: () =>
+                  context.read<ConfigBloc>().add(CargarConfiguracionEvent()),
               child: const Text('Reintentar'),
             ),
           ],
@@ -121,9 +121,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       );
     }
 
-    if (configState is! ConfigLoaded) {
-      return const SizedBox.shrink();
-    }
+    if (configState is! ConfigLoaded) return const SizedBox.shrink();
 
     final config = configState.config;
 
@@ -144,28 +142,29 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               observaciones: _observaciones,
               mostrarSelectorHospital: _mostrarSelectorHospital,
               onHospitalChanged: _onHospitalChanged,
-              onConsultorioChanged: (value) {
-                setState(() => _consultorio = value);
+              onConsultorioChanged: (v) => setState(() => _consultorio = v),
+              onEstadoChanged: (v) {
+                setState(() {
+                  _estado = v;
+                  // Limpiar categoría si cambia a Normal
+                  if (v == 'Normal') _categoriaAnomalia = null;
+                });
               },
-              onEstadoChanged: (value) {
-                setState(() => _estado = value);
-              },
-              onFocoChanged: (value) {
-                setState(() => _focoAuscultacion = value);
-              },
-              onDateChanged: (value) {
-                setState(() => _selectedDate = value);
-              },
-              onObservacionesChanged: (value) {
-                _observaciones = value;
-              },
+              onFocoChanged: (v) => setState(() => _focoAuscultacion = v),
+              onDateChanged: (v) => setState(() => _selectedDate = v),
+              onObservacionesChanged: (v) => _observaciones = v,
+              // Nuevos callbacks
+              onGeneroChanged: (v) => setState(() => _genero = v),
+              onPesoChanged: (v) => _pesoCkg = v,
+              onAlturaChanged: (v) => _alturaCm = v,
+              onCategoriaAnomaliaChanged: (v) =>
+                  setState(() => _categoriaAnomalia = v),
             ),
             const SizedBox(height: 20),
             FormAudioPicker(
               key: _audioPickerKey,
-              onFileSelected: (filePath) {
-                setState(() => _audioFilePath = filePath);
-              },
+              onFileSelected: (filePath) =>
+                  setState(() => _audioFilePath = filePath),
             ),
             const SizedBox(height: 32),
             _buildSubmitButton(),
@@ -234,16 +233,11 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
-    // SIMPLIFICADO: Ya no verificamos conectividad aquí
-    // El BLoC se encarga de verificar REAL acceso a Internet
-
-    // Validar formulario
     if (!_formKey.currentState!.validate()) {
       _showError(AppConstants.errorCamposIncompletos);
       return;
     }
 
-    // Validar archivo de audio
     if (_audioFilePath == null || !File(_audioFilePath!).existsSync()) {
       _showError(AppConstants.errorArchivoNoSeleccionado);
       return;
@@ -251,7 +245,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
     if (!mounted) return;
 
-    // Obtener códigos de la configuración
     final configState = context.read<ConfigBloc>().state;
     if (configState is! ConfigLoaded) {
       _showError('Configuración no cargada');
@@ -270,9 +263,14 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       return;
     }
 
+    // Resolver código de categoría si aplica
+    String? codigoCat;
+    if (_categoriaAnomalia != null) {
+      codigoCat = config.getCategoriaPorNombre(_categoriaAnomalia!)?.codigo;
+    }
+
     if (!mounted) return;
 
-    // Enviar formulario - El BLoC verificará la conexión antes de proceder
     context.read<FormularioBloc>().add(
           EnviarFormularioEvent(
             fechaNacimiento: _selectedDate!,
@@ -285,6 +283,11 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             codigoFoco: focoEntity.codigo,
             observaciones: _observaciones,
             audioFile: File(_audioFilePath!),
+            genero: _genero!,
+            pesoCkg: _pesoCkg!,
+            alturaCm: _alturaCm!,
+            categoriaAnomalia: _categoriaAnomalia,
+            codigoCategoriaAnomalia: codigoCat,
           ),
         );
   }
@@ -315,12 +318,15 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       _selectedDate = null;
       _observaciones = null;
       _audioFilePath = null;
+      _genero = null;
+      _pesoCkg = null;
+      _alturaCm = null;
+      _categoriaAnomalia = null;
     });
   }
 
   void _showError(String message) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -332,14 +338,13 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         ),
         backgroundColor: MedicalColors.errorRed,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5), // Más tiempo para mensajes largos
+        duration: const Duration(seconds: 5),
       ),
     );
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -359,9 +364,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.info_outline, color: MedicalColors.primaryBlue),
@@ -379,30 +382,28 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                 style: TextStyle(fontSize: 15),
               ),
               SizedBox(height: 16),
-              Text(
-                'Campos obligatorios:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text('Campos obligatorios:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               Text('• Hospital'),
               Text('• Consultorio'),
-              Text('• Estado del sonido'),
-              Text('• Foco de auscultación'),
               Text('• Fecha de nacimiento'),
+              Text('• Género'),
+              Text('• Peso (kg)'),
+              Text('• Altura (cm)'),
+              Text('• Estado del sonido'),
+              Text('• Categoría de anomalía (si es Anormal)'),
+              Text('• Foco de auscultación'),
               Text('• Archivo de audio (.wav)'),
               SizedBox(height: 16),
-              Text(
-                'Campo opcional:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text('Campo opcional:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               Text('• Diagnóstico u observaciones'),
               SizedBox(height: 16),
-              Text(
-                '⚠️ Importante:',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.orange),
-              ),
+              Text('⚠️ Importante:',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.orange)),
               SizedBox(height: 8),
               Text('• Se requiere conexión a Internet estable'),
               Text('• Los archivos pueden tardar en subirse'),

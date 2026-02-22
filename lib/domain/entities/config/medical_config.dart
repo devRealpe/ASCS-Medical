@@ -2,16 +2,19 @@ import 'package:equatable/equatable.dart';
 import 'hospital.dart';
 import 'consultorio.dart';
 import 'foco_auscultacion.dart';
+import 'categoria_anomalia.dart';
 
 class MedicalConfig extends Equatable {
   final List<Hospital> hospitales;
   final List<Consultorio> consultorios;
   final List<FocoAuscultacion> focos;
+  final List<CategoriaAnomalia> categoriasAnomalias;
 
   const MedicalConfig({
     required this.hospitales,
     required this.consultorios,
     required this.focos,
+    required this.categoriasAnomalias,
   });
 
   /// Obtiene los consultorios de un hospital específico
@@ -48,6 +51,16 @@ class MedicalConfig extends Equatable {
     }
   }
 
+  /// Obtiene una categoría de anomalía por su nombre
+  CategoriaAnomalia? getCategoriaPorNombre(String nombre) {
+    try {
+      return categoriasAnomalias.firstWhere((c) => c.nombre == nombre);
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
-  List<Object?> get props => [hospitales, consultorios, focos];
+  List<Object?> get props =>
+      [hospitales, consultorios, focos, categoriasAnomalias];
 }

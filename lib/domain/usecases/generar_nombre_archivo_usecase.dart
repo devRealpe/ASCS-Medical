@@ -10,26 +10,28 @@ class GenerarNombreArchivoUseCase {
 
   GenerarNombreArchivoUseCase({required this.repository});
 
-  /// Ejecuta el caso de uso
-  ///
-  /// Formato: DDMMAA-CCHH-FF-AAAA-EEOO.wav
-  /// DD: día, MM: mes, AA: año
-  /// CC: código consultorio, HH: código hospital
-  /// FF: código foco
-  /// AAAA: ID audio (con padding)
-  /// EE: edad, OO: tiene observaciones (01/00)
+  /// Formato: SC_YYYYMMDD_HHCC_FF_EST_AAAA.wav
+  /// SC   : prefijo estándar Sound Cardiac
+  /// YYYYMMDD: fecha de grabación
+  /// HH   : código hospital
+  /// CC   : código consultorio
+  /// FF   : código foco
+  /// EST  : estado (N=Normal / A=Anormal)
+  /// AAAA : UUID v4 parcial único
   Future<Either<Failure, String>> call({
     required DateTime fechaNacimiento,
     required String codigoConsultorio,
     required String codigoHospital,
     required String codigoFoco,
-    String? observaciones, // CORRECCIÓN: opcional
+    required String estado,
+    String? observaciones,
   }) async {
     return await repository.generarNombreArchivo(
       fechaNacimiento: fechaNacimiento,
       codigoConsultorio: codigoConsultorio,
       codigoHospital: codigoHospital,
       codigoFoco: codigoFoco,
+      estado: estado,
       observaciones: observaciones,
     );
   }

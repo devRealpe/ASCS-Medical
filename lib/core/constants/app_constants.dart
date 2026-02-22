@@ -30,7 +30,6 @@ class AppConstants {
 
   // Configuración de formulario
   static const int maxObservacionesLength = 500;
-  static const int audioIdPadding = 4; // Formato: 0001, 0002, etc.
 
   // Mensajes de error
   static const String errorNoInternet =

@@ -3,12 +3,14 @@ import '../../../domain/entities/config/medical_config.dart';
 import 'hospital_model.dart';
 import 'consultorio_model.dart';
 import 'foco_auscultacion_model.dart';
+import 'categoria_anomalia_model.dart';
 
 class MedicalConfigModel extends MedicalConfig {
   const MedicalConfigModel({
     required super.hospitales,
     required super.consultorios,
     required super.focos,
+    required super.categoriasAnomalias,
   });
 
   factory MedicalConfigModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,10 @@ class MedicalConfigModel extends MedicalConfig {
       focos: (json['focos'] as List)
           .map((f) => FocoAuscultacionModel.fromJson(f as Map<String, dynamic>))
           .toList(),
+      categoriasAnomalias: (json['categorias_anomalias'] as List)
+          .map(
+              (c) => CategoriaAnomaliaModel.fromJson(c as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -32,6 +38,9 @@ class MedicalConfigModel extends MedicalConfig {
       'consultorios':
           consultorios.map((c) => (c as ConsultorioModel).toJson()).toList(),
       'focos': focos.map((f) => (f as FocoAuscultacionModel).toJson()).toList(),
+      'categorias_anomalias': categoriasAnomalias
+          .map((c) => (c as CategoriaAnomaliaModel).toJson())
+          .toList(),
     };
   }
 }

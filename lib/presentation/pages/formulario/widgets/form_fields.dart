@@ -1,4 +1,6 @@
+// lib/presentation/pages/formulario/widgets/form_fields.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../domain/entities/config/medical_config.dart';
 import '../../../theme/medical_colors.dart';
 
@@ -18,6 +20,12 @@ class FormFields extends StatefulWidget {
   final Function(DateTime?) onDateChanged;
   final Function(String?) onObservacionesChanged;
 
+  // Nuevos callbacks
+  final Function(String?) onGeneroChanged;
+  final Function(double?) onPesoChanged;
+  final Function(double?) onAlturaChanged;
+  final Function(String?) onCategoriaAnomaliaChanged;
+
   const FormFields({
     super.key,
     required this.config,
@@ -34,6 +42,10 @@ class FormFields extends StatefulWidget {
     required this.onFocoChanged,
     required this.onDateChanged,
     required this.onObservacionesChanged,
+    required this.onGeneroChanged,
+    required this.onPesoChanged,
+    required this.onAlturaChanged,
+    required this.onCategoriaAnomaliaChanged,
   });
 
   @override
@@ -42,32 +54,41 @@ class FormFields extends StatefulWidget {
 
 class FormFieldsState extends State<FormFields> {
   late TextEditingController _observacionesController;
+  late TextEditingController _pesoController;
+  late TextEditingController _alturaController;
+
+  String? _generoSeleccionado;
+  String? _categoriaAnomaliaSeleccionada;
 
   @override
   void initState() {
     super.initState();
     _observacionesController =
         TextEditingController(text: widget.observaciones);
+    _pesoController = TextEditingController();
+    _alturaController = TextEditingController();
 
-    // Escuchar cambios del controlador y notificar al padre
     _observacionesController.addListener(() {
       widget.onObservacionesChanged(_observacionesController.text);
     });
   }
 
-  // CORRECCIÓN: Eliminar didUpdateWidget para evitar el ciclo de sincronización
-  // Ya no necesitamos sincronizar desde el padre porque el controlador
-  // es la única fuente de verdad para este campo
-
   @override
   void dispose() {
     _observacionesController.dispose();
+    _pesoController.dispose();
+    _alturaController.dispose();
     super.dispose();
   }
 
-  // Método público para limpiar el controlador desde el padre
   void reset() {
     _observacionesController.clear();
+    _pesoController.clear();
+    _alturaController.clear();
+    setState(() {
+      _generoSeleccionado = null;
+      _categoriaAnomaliaSeleccionada = null;
+    });
   }
 
   @override
@@ -100,6 +121,67 @@ class FormFieldsState extends State<FormFields> {
         ),
         const SizedBox(height: 20),
 
+        // Tarjeta de datos del paciente
+        _buildCard(
+          title: 'Datos del paciente',
+          icon: Icons.person,
+          children: [
+            // Fecha de nacimiento
+            _buildDatePicker(context),
+            const SizedBox(height: 20),
+
+            // Género
+            _buildGeneroSelector(),
+            const SizedBox(height: 20),
+
+            // Peso y Altura en fila
+            Row(
+              children: [
+                Expanded(
+                  child: _buildNumericField(
+                    controller: _pesoController,
+                    label: 'Peso (kg)',
+                    icon: Icons.monitor_weight_outlined,
+                    hint: 'Ej: 70.5',
+                    onChanged: (v) {
+                      widget.onPesoChanged(double.tryParse(v ?? ''));
+                    },
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Requerido';
+                      final val = double.tryParse(v);
+                      if (val == null || val <= 0 || val > 300) {
+                        return 'Peso inválido';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildNumericField(
+                    controller: _alturaController,
+                    label: 'Altura (cm)',
+                    icon: Icons.height,
+                    hint: 'Ej: 170',
+                    onChanged: (v) {
+                      widget.onAlturaChanged(double.tryParse(v ?? ''));
+                    },
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Requerido';
+                      final val = double.tryParse(v);
+                      if (val == null || val <= 0 || val > 300) {
+                        return 'Altura inválida';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
         // Tarjeta de información médica
         _buildCard(
           title: 'Información médica',
@@ -113,6 +195,13 @@ class FormFieldsState extends State<FormFields> {
               onChanged: widget.onEstadoChanged,
             ),
             const SizedBox(height: 20),
+
+            // Categoría de anomalía (solo visible si estado es Anormal)
+            if (widget.estado == 'Anormal') ...[
+              _buildDropdownCategoriaAnomalia(),
+              const SizedBox(height: 20),
+            ],
+
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -134,18 +223,14 @@ class FormFieldsState extends State<FormFields> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
-                    icon: const Icon(
-                      Icons.info_outline,
-                      color: MedicalColors.primaryBlue,
-                    ),
+                    icon: const Icon(Icons.info_outline,
+                        color: MedicalColors.primaryBlue),
                     tooltip: 'Ver focos de auscultación',
                     onPressed: () => _showFocosDialog(context),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            _buildDatePicker(context),
           ],
         ),
         const SizedBox(height: 20),
@@ -161,6 +246,8 @@ class FormFieldsState extends State<FormFields> {
       ],
     );
   }
+
+  // ─────────────────────────────── WIDGETS HELPERS ────────────────────────────
 
   Widget _buildCard({
     required String title,
@@ -229,6 +316,7 @@ class FormFieldsState extends State<FormFields> {
     required List<String> items,
     required String? value,
     required Function(String?) onChanged,
+    bool required = true,
   }) {
     return DropdownButtonFormField<String>(
       initialValue: value,
@@ -277,12 +365,253 @@ class FormFieldsState extends State<FormFields> {
               ))
           .toList(),
       onChanged: onChanged,
-      validator: (v) => v == null ? 'Selecciona una opción' : null,
-      icon: const Icon(
-        Icons.keyboard_arrow_down,
-        color: MedicalColors.primaryBlue,
-      ),
+      validator:
+          required ? (v) => v == null ? 'Selecciona una opción' : null : null,
+      icon: const Icon(Icons.keyboard_arrow_down,
+          color: MedicalColors.primaryBlue),
       borderRadius: BorderRadius.circular(14),
+    );
+  }
+
+  /// Dropdown específico para categoría de anomalía
+  Widget _buildDropdownCategoriaAnomalia() {
+    return DropdownButtonFormField<String>(
+      value: _categoriaAnomaliaSeleccionada,
+      decoration: InputDecoration(
+        labelText: 'Categoría de anomalía',
+        labelStyle: const TextStyle(
+          color: MedicalColors.textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: MedicalColors.warningOrange.withAlpha((0.1 * 255).toInt()),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.warning_amber_rounded,
+              color: MedicalColors.warningOrange, size: 20),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide:
+              const BorderSide(color: MedicalColors.warningOrange, width: 2.5),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      items: widget.config.categoriasAnomalias
+          .map((cat) => DropdownMenuItem(
+                value: cat.nombre,
+                child: Text(
+                  cat.nombre,
+                  style: const TextStyle(
+                    color: MedicalColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ))
+          .toList(),
+      onChanged: (value) {
+        setState(() => _categoriaAnomaliaSeleccionada = value);
+        widget.onCategoriaAnomaliaChanged(value);
+      },
+      validator: (v) => v == null ? 'Selecciona una categoría' : null,
+      icon: const Icon(Icons.keyboard_arrow_down,
+          color: MedicalColors.warningOrange),
+      borderRadius: BorderRadius.circular(14),
+    );
+  }
+
+  /// Selector de género con botones M / F
+  Widget _buildGeneroSelector() {
+    return FormField<String>(
+      initialValue: _generoSeleccionado,
+      validator: (v) =>
+          (v == null || v.isEmpty) ? 'Selecciona el género' : null,
+      builder: (field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: MedicalColors.primaryBlue
+                        .withAlpha((0.1 * 255).toInt()),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.wc,
+                      color: MedicalColors.primaryBlue, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Género',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: MedicalColors.textSecondary,
+                  ),
+                ),
+                const Text(
+                  ' *',
+                  style: TextStyle(color: Colors.red, fontSize: 15),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildGeneroButton(
+                  label: 'Masculino',
+                  value: 'M',
+                  icon: Icons.male,
+                  color: const Color(0xFF1565C0),
+                  selected: _generoSeleccionado == 'M',
+                  onTap: () {
+                    setState(() => _generoSeleccionado = 'M');
+                    field.didChange('M');
+                    widget.onGeneroChanged('M');
+                  },
+                ),
+                const SizedBox(width: 12),
+                _buildGeneroButton(
+                  label: 'Femenino',
+                  value: 'F',
+                  icon: Icons.female,
+                  color: const Color(0xFFC2185B),
+                  selected: _generoSeleccionado == 'F',
+                  onTap: () {
+                    setState(() => _generoSeleccionado = 'F');
+                    field.didChange('F');
+                    widget.onGeneroChanged('F');
+                  },
+                ),
+              ],
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 12),
+                child: Text(
+                  field.errorText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGeneroButton({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withAlpha((0.12 * 255).toInt())
+                : Colors.grey[50],
+            border: Border.all(
+              color: selected ? color : Colors.grey.shade300,
+              width: selected ? 2.5 : 1.5,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  color: selected ? color : Colors.grey.shade500, size: 22),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  color: selected ? color : Colors.grey.shade600,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumericField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    required Function(String?) onChanged,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+      ],
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(
+          color: MedicalColors.textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
+        hintText: hint,
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: MedicalColors.primaryBlue, size: 20),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide:
+              const BorderSide(color: MedicalColors.primaryBlue, width: 2.5),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      onChanged: onChanged,
+      validator: validator,
+      style: const TextStyle(
+        color: MedicalColors.textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 
@@ -301,11 +630,8 @@ class FormFieldsState extends State<FormFields> {
             color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.calendar_today,
-            color: MedicalColors.primaryBlue,
-            size: 20,
-          ),
+          child: const Icon(Icons.calendar_today,
+              color: MedicalColors.primaryBlue, size: 20),
         ),
         suffixIcon: widget.selectedDate != null
             ? Container(
@@ -316,11 +642,8 @@ class FormFieldsState extends State<FormFields> {
                       MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  color: MedicalColors.primaryBlue,
-                  size: 16,
-                ),
+                child: const Icon(Icons.check,
+                    color: MedicalColors.primaryBlue, size: 16),
               )
             : null,
         border: OutlineInputBorder(
@@ -343,7 +666,9 @@ class FormFieldsState extends State<FormFields> {
       onTap: () => _selectDate(context),
       controller: TextEditingController(
         text: widget.selectedDate != null
-            ? '${widget.selectedDate!.day.toString().padLeft(2, '0')}/${widget.selectedDate!.month.toString().padLeft(2, '0')}/${widget.selectedDate!.year}'
+            ? '${widget.selectedDate!.day.toString().padLeft(2, '0')}/'
+                '${widget.selectedDate!.month.toString().padLeft(2, '0')}/'
+                '${widget.selectedDate!.year}'
             : '',
       ),
       validator: (v) =>
@@ -397,11 +722,8 @@ class FormFieldsState extends State<FormFields> {
             color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.notes,
-            color: MedicalColors.primaryBlue,
-            size: 20,
-          ),
+          child: const Icon(Icons.notes,
+              color: MedicalColors.primaryBlue, size: 20),
         ),
         hintText: 'Escribe observaciones o diagnóstico aquí...',
         border: OutlineInputBorder(
@@ -421,7 +743,6 @@ class FormFieldsState extends State<FormFields> {
         fillColor: Colors.grey[50],
         alignLabelWithHint: true,
       ),
-      // CORRECCIÓN: Ya no necesitamos onChanged aquí porque usamos un listener
       maxLines: 4,
       minLines: 3,
       textCapitalization: TextCapitalization.sentences,
@@ -430,10 +751,8 @@ class FormFieldsState extends State<FormFields> {
 
   List<String> _getConsultoriosDisponibles() {
     if (widget.hospital == null) return [];
-
     final hospitalEntity = widget.config.getHospitalPorNombre(widget.hospital!);
     if (hospitalEntity == null) return [];
-
     return widget.config
         .getConsultoriosPorHospital(hospitalEntity.codigo)
         .map((c) => c.nombre)
@@ -459,20 +778,15 @@ class FormFieldsState extends State<FormFields> {
                           .withAlpha((0.1 * 255).toInt()),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.hearing,
-                      color: MedicalColors.primaryBlue,
-                      size: 24,
-                    ),
+                    child: const Icon(Icons.hearing,
+                        color: MedicalColors.primaryBlue, size: 24),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'Focos de auscultación',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

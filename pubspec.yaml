@@ -30,7 +30,10 @@ dependencies:
   # Sistema de archivos
   path_provider: ^2.1.5
 
-  # AWS Amplify - ACTUALIZADO a versiones más recientes
+  # UUID v4 para generación de IDs únicos
+  uuid: ^4.5.1
+
+  # AWS Amplify
   amplify_flutter: ^2.7.0
   amplify_storage_s3: ^2.7.0
   amplify_core: ^2.7.0

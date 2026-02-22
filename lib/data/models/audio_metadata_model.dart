@@ -16,7 +16,12 @@ class AudioMetadataModel extends AudioMetadata {
     required super.estado,
     required super.focoAuscultacion,
     required super.codigoFoco,
+    required super.genero,
+    required super.pesoCkg,
+    required super.alturaCm,
     super.observaciones,
+    super.categoriaAnomalia,
+    super.codigoCategoriaAnomalia,
   });
 
   /// Crea un modelo desde JSON
@@ -24,6 +29,7 @@ class AudioMetadataModel extends AudioMetadata {
     final metadata = json['metadata'] as Map<String, dynamic>;
     final ubicacion = json['ubicacion'] as Map<String, dynamic>;
     final diagnostico = json['diagnostico'] as Map<String, dynamic>;
+    final paciente = json['paciente'] as Map<String, dynamic>;
 
     return AudioMetadataModel(
       fechaNacimiento: DateTime.parse(metadata['fecha_nacimiento'] as String),
@@ -38,6 +44,12 @@ class AudioMetadataModel extends AudioMetadata {
       focoAuscultacion: diagnostico['foco_auscultacion'] as String,
       codigoFoco: diagnostico['codigo_foco'] as String,
       observaciones: diagnostico['observaciones'] as String?,
+      categoriaAnomalia: diagnostico['categoria_anomalia'] as String?,
+      codigoCategoriaAnomalia:
+          diagnostico['codigo_categoria_anomalia'] as String?,
+      genero: paciente['genero'] as String,
+      pesoCkg: (paciente['peso_kg'] as num).toDouble(),
+      alturaCm: (paciente['altura_cm'] as num).toDouble(),
     );
   }
 
@@ -61,6 +73,13 @@ class AudioMetadataModel extends AudioMetadata {
         'foco_auscultacion': focoAuscultacion,
         'codigo_foco': codigoFoco,
         'observaciones': observaciones ?? 'No aplica',
+        'categoria_anomalia': categoriaAnomalia,
+        'codigo_categoria_anomalia': codigoCategoriaAnomalia,
+      },
+      'paciente': {
+        'genero': genero,
+        'peso_kg': pesoCkg,
+        'altura_cm': alturaCm,
       },
     };
   }
@@ -79,6 +98,11 @@ class AudioMetadataModel extends AudioMetadata {
     String? focoAuscultacion,
     String? codigoFoco,
     String? observaciones,
+    String? genero,
+    double? pesoCkg,
+    double? alturaCm,
+    String? categoriaAnomalia,
+    String? codigoCategoriaAnomalia,
   }) {
     return AudioMetadataModel(
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
@@ -93,6 +117,12 @@ class AudioMetadataModel extends AudioMetadata {
       focoAuscultacion: focoAuscultacion ?? this.focoAuscultacion,
       codigoFoco: codigoFoco ?? this.codigoFoco,
       observaciones: observaciones ?? this.observaciones,
+      genero: genero ?? this.genero,
+      pesoCkg: pesoCkg ?? this.pesoCkg,
+      alturaCm: alturaCm ?? this.alturaCm,
+      categoriaAnomalia: categoriaAnomalia ?? this.categoriaAnomalia,
+      codigoCategoriaAnomalia:
+          codigoCategoriaAnomalia ?? this.codigoCategoriaAnomalia,
     );
   }
 }

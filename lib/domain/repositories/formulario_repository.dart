@@ -13,11 +13,13 @@ abstract class FormularioRepository {
   });
 
   /// Genera el nombre de archivo siguiendo la nomenclatura establecida
+  /// Formato: SC_YYYYMMDD_HHCC_FF_EST_AAAA.wav
   Future<Either<Failure, String>> generarNombreArchivo({
     required DateTime fechaNacimiento,
     required String codigoConsultorio,
     required String codigoHospital,
     required String codigoFoco,
+    required String estado,
     String? observaciones,
   });
 }

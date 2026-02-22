@@ -23,6 +23,13 @@ class EnviarFormularioEvent extends FormularioEvent {
   final String? observaciones;
   final File audioFile;
 
+  // Nuevos campos
+  final String genero;
+  final double pesoCkg;
+  final double alturaCm;
+  final String? categoriaAnomalia;
+  final String? codigoCategoriaAnomalia;
+
   const EnviarFormularioEvent({
     required this.fechaNacimiento,
     required this.hospital,
@@ -32,7 +39,12 @@ class EnviarFormularioEvent extends FormularioEvent {
     required this.estado,
     required this.focoAuscultacion,
     required this.codigoFoco,
+    required this.genero,
+    required this.pesoCkg,
+    required this.alturaCm,
     this.observaciones,
+    this.categoriaAnomalia,
+    this.codigoCategoriaAnomalia,
     required this.audioFile,
   });
 
@@ -48,6 +60,11 @@ class EnviarFormularioEvent extends FormularioEvent {
         codigoFoco,
         observaciones,
         audioFile,
+        genero,
+        pesoCkg,
+        alturaCm,
+        categoriaAnomalia,
+        codigoCategoriaAnomalia,
       ];
 }
 

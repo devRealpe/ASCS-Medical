@@ -1,61 +1,33 @@
 {
   "hospitales": [
-    {
-      "nombre": "Departamental",
-      "codigo": "01"
-    },
-    {
-      "nombre": "San Juan de Dios",
-      "codigo": "02"
-    },
-    {
-      "nombre": "General",
-      "codigo": "03"
-    }
+    { "nombre": "Departamental", "codigo": "01" },
+    { "nombre": "San Juan de Dios", "codigo": "02" },
+    { "nombre": "General", "codigo": "03" }
   ],
   "consultorios": [
-    {
-      "nombre": "101 A",
-      "codigo": "01",
-      "codigo_hospital": "01"
-    },
-    {
-      "nombre": "102 B",
-      "codigo": "02",
-      "codigo_hospital": "01"
-    },
-    {
-      "nombre": "201 C",
-      "codigo": "03",
-      "codigo_hospital": "02"
-    },
-    {
-      "nombre": "202 D",
-      "codigo": "04",
-      "codigo_hospital": "02"
-    },
-    {
-      "nombre": "301 E",
-      "codigo": "05",
-      "codigo_hospital": "03"
-    }
+    { "nombre": "101 A", "codigo": "01", "codigo_hospital": "01" },
+    { "nombre": "102 B", "codigo": "02", "codigo_hospital": "01" },
+    { "nombre": "201 C", "codigo": "03", "codigo_hospital": "02" },
+    { "nombre": "202 D", "codigo": "04", "codigo_hospital": "02" },
+    { "nombre": "301 E", "codigo": "05", "codigo_hospital": "03" }
   ],
   "focos": [
-    {
-      "nombre": "Aórtico",
-      "codigo": "01"
-    },
-    {
-      "nombre": "Pulmonar",
-      "codigo": "02"
-    },
-    {
-      "nombre": "Tricuspídeo",
-      "codigo": "03"
-    },
-    {
-      "nombre": "Mitral",
-      "codigo": "04"
-    }
+    { "nombre": "Aórtico",     "codigo": "01" },
+    { "nombre": "Pulmonar",    "codigo": "02" },
+    { "nombre": "Tricuspídeo", "codigo": "03" },
+    { "nombre": "Mitral",      "codigo": "04" }
+  ],
+  "categorias_anomalias": [
+    { "nombre": "Soplo sistólico",   "codigo": "SA" },
+    { "nombre": "Soplo diastólico",  "codigo": "SD" },
+    { "nombre": "Soplo continuo",    "codigo": "SC" },
+    { "nombre": "Arritmia",          "codigo": "AR" },
+    { "nombre": "Taquicardia",       "codigo": "TA" },
+    { "nombre": "Bradicardia",       "codigo": "BR" },
+    { "nombre": "Clic de eyección",  "codigo": "CE" },
+    { "nombre": "Frote pericárdico", "codigo": "FP" },
+    { "nombre": "Galope S3",         "codigo": "G3" },
+    { "nombre": "Galope S4",         "codigo": "G4" },
+    { "nombre": "Otro",              "codigo": "OT" }
   ]
 }

@@ -22,6 +22,13 @@ class AudioMetadata extends Equatable {
   final String codigoFoco;
   final String? observaciones;
 
+  // Nuevos campos
+  final String genero; // 'M' o 'F'
+  final double pesoCkg; // peso en kg
+  final double alturaCm; // altura en cm
+  final String? categoriaAnomalia; // nombre de la categoría (opcional)
+  final String? codigoCategoriaAnomalia; // código de la categoría (opcional)
+
   const AudioMetadata({
     required this.fechaNacimiento,
     required this.edad,
@@ -34,7 +41,12 @@ class AudioMetadata extends Equatable {
     required this.estado,
     required this.focoAuscultacion,
     required this.codigoFoco,
+    required this.genero,
+    required this.pesoCkg,
+    required this.alturaCm,
     this.observaciones,
+    this.categoriaAnomalia,
+    this.codigoCategoriaAnomalia,
   });
 
   @override
@@ -51,5 +63,10 @@ class AudioMetadata extends Equatable {
         focoAuscultacion,
         codigoFoco,
         observaciones,
+        genero,
+        pesoCkg,
+        alturaCm,
+        categoriaAnomalia,
+        codigoCategoriaAnomalia,
       ];
 }
