@@ -1,15 +1,16 @@
+// lib/core/services/storage_preference_service.dart
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Modos de almacenamiento disponibles
 enum StorageMode { local, cloud }
 
 /// Servicio para gestionar la preferencia de almacenamiento
-/// El modo predeterminado es LOCAL
-/// Para cambiar el modo se requiere contraseña
 class StoragePreferenceService {
   StoragePreferenceService._();
 
   static const String _storageModeKey = 'storage_mode';
+  static const String _localPathKey = 'local_storage_path';
   static const String _correctPassword = '9vT\$Q7!mZ@4rL#8xP2^kW&6aN';
 
   /// Obtiene el modo de almacenamiento actual (default: local)
@@ -28,7 +29,6 @@ class StoragePreferenceService {
   }
 
   /// Cambia el modo de almacenamiento (requiere contraseña)
-  /// Retorna true si el cambio fue exitoso, false si la contraseña es incorrecta
   static Future<bool> setStorageMode(StorageMode mode, String password) async {
     if (!verifyPassword(password)) {
       return false;
@@ -36,6 +36,26 @@ class StoragePreferenceService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageModeKey, mode.name);
     return true;
+  }
+
+  /// Obtiene la ruta personalizada para almacenamiento local
+  /// Retorna null si no se ha configurado (usará la ruta por defecto)
+  static Future<String?> getLocalStoragePath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_localPathKey);
+  }
+
+  /// Guarda la ruta personalizada para almacenamiento local
+  /// No requiere contraseña — solo es visible/editable cuando el modo ya es local
+  static Future<void> setLocalStoragePath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_localPathKey, path);
+  }
+
+  /// Elimina la ruta personalizada (vuelve a usar la ruta por defecto)
+  static Future<void> clearLocalStoragePath() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_localPathKey);
   }
 
   /// Obtiene la etiqueta legible del modo

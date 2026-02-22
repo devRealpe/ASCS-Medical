@@ -5,26 +5,22 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../core/services/storage_preference_service.dart';
 
 /// Contrato para almacenamiento local
 abstract class LocalStorageDataSource {
-  /// Copia el archivo de audio al repositorio local
-  /// Retorna la ruta local donde fue guardado
   Future<String> guardarAudioLocal({
     required File audioFile,
     required String fileName,
   });
 
-  /// Guarda el metadata JSON localmente
   Future<void> guardarMetadataLocal({
     required Map<String, dynamic> metadata,
     required String fileName,
   });
 
-  /// Genera un ID único verificando que no exista ya localmente
   Future<String> generarAudioIdUnicoLocal();
 
-  /// Obtiene la ruta del directorio local de repositorio
   Future<Directory> obtenerDirectorioRepositorio();
 }
 
@@ -37,9 +33,27 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
 
   final _uuid = const Uuid();
 
+  /// Obtiene el directorio base:
+  /// - Si el usuario configuró una ruta personalizada y existe → la usa
+  /// - Si no → usa getApplicationDocumentsDirectory() como antes
+  Future<Directory> _obtenerDirectorioBase() async {
+    final customPath = await StoragePreferenceService.getLocalStoragePath();
+
+    if (customPath != null && customPath.isNotEmpty) {
+      final customDir = Directory(customPath);
+      if (await customDir.exists()) {
+        return customDir;
+      }
+      // Si la ruta guardada ya no existe, limpiarla y usar la por defecto
+      await StoragePreferenceService.clearLocalStoragePath();
+    }
+
+    return await getApplicationDocumentsDirectory();
+  }
+
   @override
   Future<Directory> obtenerDirectorioRepositorio() async {
-    final baseDir = await getApplicationDocumentsDirectory();
+    final baseDir = await _obtenerDirectorioBase();
     final repoDir = Directory('${baseDir.path}/$_repositorioDir');
     if (!await repoDir.exists()) {
       await repoDir.create(recursive: true);
@@ -74,13 +88,9 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
       if (!audioFile.existsSync()) {
         throw const FileException('El archivo de audio no existe');
       }
-
       final dirAudios = await _obtenerDirAudios();
       final destino = File('${dirAudios.path}/$fileName');
-
-      // Copiar el archivo al repositorio local
       await audioFile.copy(destino.path);
-
       return destino.path;
     } on FileException {
       rethrow;
@@ -98,7 +108,6 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
       final dirJson = await _obtenerDirJson();
       final fileNameSinExt = fileName.replaceAll('.wav', '');
       final archivo = File('${dirJson.path}/$fileNameSinExt.json');
-
       await archivo.writeAsString(
         const JsonEncoder.withIndent('  ').convert(metadata),
         flush: true,
@@ -115,19 +124,15 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
     for (int i = 0; i < _maxUuidAttempts; i++) {
       final candidateId =
           _uuid.v4().replaceAll('-', '').substring(0, 12).toUpperCase();
-
-      // Verificar que no exista ningún archivo con ese ID en audios o json
       final existe = await _idExisteLocalmente(candidateId, dirAudios);
       if (!existe) {
         return candidateId;
       }
     }
 
-    // Fallback con UUID completo si hubo muchas colisiones (extremadamente improbable)
     return _uuid.v4().replaceAll('-', '').toUpperCase();
   }
 
-  /// Verifica si un ID ya existe en el directorio de audios locales
   Future<bool> _idExisteLocalmente(String audioId, Directory dirAudios) async {
     try {
       if (!await dirAudios.exists()) return false;
