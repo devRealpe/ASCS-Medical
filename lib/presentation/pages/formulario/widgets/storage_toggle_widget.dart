@@ -1,9 +1,10 @@
+// lib/presentation/pages/formulario/widgets/storage_toggle_widget.dart
+
 import 'package:flutter/material.dart';
 import '../../../../core/services/storage_preference_service.dart';
 import '../../../theme/medical_colors.dart';
 
 /// Widget compacto para cambiar el modo de almacenamiento
-/// Se muestra como un pequeño ícono en el AppBar
 class StorageToggleWidget extends StatefulWidget {
   const StorageToggleWidget({super.key});
 
@@ -35,12 +36,12 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const SizedBox(
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         child: Center(
           child: SizedBox(
-            width: 16,
-            height: 16,
+            width: 14,
+            height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 2,
               color: Colors.white,
@@ -55,6 +56,8 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
     return Tooltip(
       message: isLocal ? 'Almacenamiento: Local' : 'Almacenamiento: Nube',
       child: Container(
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: Colors.white.withAlpha((0.15 * 255).toInt()),
           borderRadius: BorderRadius.circular(10),
@@ -62,34 +65,30 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
         child: InkWell(
           onTap: () => _showStorageOptions(context),
           borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  isLocal ? Icons.storage_rounded : Icons.cloud_done_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-                // Indicador de punto en la esquina
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: isLocal
-                          ? const Color(0xFF66BB6A) // verde = local
-                          : const Color(0xFF42A5F5), // azul = nube
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                isLocal ? Icons.storage_rounded : Icons.cloud_done_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: isLocal
+                        ? const Color(0xFF66BB6A)
+                        : const Color(0xFF42A5F5),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -110,6 +109,10 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bottom Sheet de opciones
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _StorageOptionsSheet extends StatefulWidget {
   final StorageMode currentMode;
@@ -152,7 +155,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
         borderRadius: BorderRadius.circular(24),
       ),
       child: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
@@ -193,25 +196,27 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Almacenamiento',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: MedicalColors.textPrimary,
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Almacenamiento',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: MedicalColors.textPrimary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Requiere contraseña para cambiar',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: MedicalColors.textSecondary,
+                        Text(
+                          'Requiere contraseña para cambiar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: MedicalColors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -235,7 +240,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                 color: MedicalColors.primaryBlue,
               ),
 
-              // Sección de contraseña (solo si el modo seleccionado es diferente al actual)
+              // Sección de contraseña
               if (_selectedMode != widget.currentMode) ...[
                 const SizedBox(height: 20),
                 Container(
@@ -253,12 +258,14 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                           Icon(Icons.lock_outline,
                               size: 16, color: Colors.orange.shade700),
                           const SizedBox(width: 8),
-                          Text(
-                            'Ingresa la contraseña para confirmar',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange.shade800,
+                          Expanded(
+                            child: Text(
+                              'Ingresa la contraseña para confirmar',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange.shade800,
+                              ),
                             ),
                           ),
                         ],
@@ -332,7 +339,6 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
 
               const SizedBox(height: 8),
 
-              // Botón cancelar (solo si no cambió nada)
               if (_selectedMode == widget.currentMode)
                 SizedBox(
                   width: double.infinity,
@@ -348,6 +354,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
     );
   }
 
+  /// Opción de almacenamiento — usa GestureDetector + indicador visual en lugar de Radio deprecated
   Widget _buildStorageOption({
     required StorageMode mode,
     required IconData icon,
@@ -368,7 +375,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isSelected
               ? color.withAlpha((0.08 * 255).toInt())
@@ -389,26 +396,32 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                     : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon,
-                  color: isSelected ? color : Colors.grey.shade500, size: 24),
+              child: Icon(
+                icon,
+                color: isSelected ? color : Colors.grey.shade500,
+                size: 22,
+              ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? color : MedicalColors.textPrimary,
-                          fontSize: 15,
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color:
+                                isSelected ? color : MedicalColors.textPrimary,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       if (isCurrent) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
@@ -432,26 +445,41 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Colors.grey.shade600,
                     ),
                   ),
                 ],
               ),
             ),
-            Radio<StorageMode>(
-              value: mode,
-              groupValue: _selectedMode,
-              activeColor: color,
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() {
-                    _selectedMode = v;
-                    _errorText = null;
-                    _passwordController.clear();
-                  });
-                }
-              },
+            const SizedBox(width: 8),
+            // Reemplazo de Radio deprecated: círculo manual
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? color : Colors.grey.shade400,
+                  width: isSelected ? 2 : 1.5,
+                ),
+                color: isSelected
+                    ? color.withAlpha((0.12 * 255).toInt())
+                    : Colors.transparent,
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
           ],
         ),
@@ -474,7 +502,6 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
     );
 
     if (!mounted) return;
-
     setState(() => _isChanging = false);
 
     if (exito) {
@@ -486,8 +513,11 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
             children: [
               const Icon(Icons.check_circle_outline, color: Colors.white),
               const SizedBox(width: 8),
-              Text(
-                  'Modo cambiado a: ${StoragePreferenceService.getModeLabel(_selectedMode)}'),
+              Expanded(
+                child: Text(
+                  'Modo cambiado a: ${StoragePreferenceService.getModeLabel(_selectedMode)}',
+                ),
+              ),
             ],
           ),
           backgroundColor: const Color(0xFF43A047),
