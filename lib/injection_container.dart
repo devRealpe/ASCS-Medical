@@ -1,6 +1,3 @@
-// lib/injection_container.dart
-// ACTUALIZADO con NetworkInfo
-
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -10,6 +7,7 @@ import 'core/network/network_info.dart';
 
 // Data Sources
 import 'data/datasources/local/config_local_datasource.dart';
+import 'data/datasources/local/local_storage_datasource.dart';
 import 'data/datasources/remote/aws_s3_remote_datasource.dart';
 
 // Repositories
@@ -78,7 +76,7 @@ Future<void> init() async {
     () => FormularioBloc(
       enviarFormularioUseCase: sl(),
       generarNombreArchivoUseCase: sl(),
-      networkInfo: sl(), // Inyectamos NetworkInfo
+      networkInfo: sl(),
     ),
   );
 
@@ -90,12 +88,19 @@ Future<void> init() async {
 
   // Repository
   sl.registerLazySingleton<FormularioRepository>(
-    () => FormularioRepositoryImpl(remoteDataSource: sl()),
+    () => FormularioRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+    ),
   );
 
   // Data Sources
   sl.registerLazySingleton<AwsS3RemoteDataSource>(
     () => AwsS3RemoteDataSourceImpl(),
+  );
+
+  sl.registerLazySingleton<LocalStorageDataSource>(
+    () => LocalStorageDataSourceImpl(),
   );
 
   // HTTP Client

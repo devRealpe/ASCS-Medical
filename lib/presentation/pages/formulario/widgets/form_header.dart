@@ -1,6 +1,6 @@
-// lib/presentation/pages/formulario/widgets/form_header.dart
 import 'package:flutter/material.dart';
 import '../../../theme/medical_colors.dart';
+import '../widgets/storage_toggle_widget.dart';
 
 class FormHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onInfoPressed;
@@ -69,6 +69,10 @@ class FormHeader extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
+                  // Botón de configuración de almacenamiento
+                  const StorageToggleWidget(),
+                  const SizedBox(width: 8),
+                  // Botón de información
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha((0.15 * 255).toInt()),

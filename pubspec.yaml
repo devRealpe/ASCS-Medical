@@ -33,6 +33,9 @@ dependencies:
   # UUID v4 para generación de IDs únicos
   uuid: ^4.5.1
 
+  # Persistencia de preferencias
+  shared_preferences: ^2.3.2
+
   # AWS Amplify
   amplify_flutter: ^2.7.0
   amplify_storage_s3: ^2.7.0
