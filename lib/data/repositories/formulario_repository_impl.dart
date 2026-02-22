@@ -106,7 +106,7 @@ class FormularioRepositoryImpl implements FormularioRepository {
       // Formato: SC_YYYYMMDD_HHCC_FF_EST_AAAA.wav
       final fileName = 'SC_${fechaStr}_$codigoHospital$codigoConsultorio'
           '_$codigoFoco'
-          '_${estStr}'
+          '_$estStr'
           '_$audioId.wav';
 
       return Right(fileName);

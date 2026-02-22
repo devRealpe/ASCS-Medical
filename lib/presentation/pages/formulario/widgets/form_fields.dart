@@ -376,7 +376,7 @@ class FormFieldsState extends State<FormFields> {
   /// Dropdown específico para categoría de anomalía
   Widget _buildDropdownCategoriaAnomalia() {
     return DropdownButtonFormField<String>(
-      value: _categoriaAnomaliaSeleccionada,
+      initialValue: _categoriaAnomaliaSeleccionada,
       decoration: InputDecoration(
         labelText: 'Categoría de anomalía',
         labelStyle: const TextStyle(
