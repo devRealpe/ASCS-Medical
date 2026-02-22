@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/services/storage_preference_service.dart';
 import '../../../theme/medical_colors.dart';
+import '../../../../core/services/permission_service.dart';
 
 /// Widget compacto en el AppBar para abrir la configuración de almacenamiento
 class StorageToggleWidget extends StatefulWidget {
@@ -163,11 +164,72 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
     return '.../${parts[parts.length - 2]}/${parts.last}';
   }
 
+// Reemplaza el método _pickFolder existente en _StorageOptionsSheetState
+
   Future<void> _pickFolder() async {
+    // 1. Solicitar permisos de almacenamiento antes de mostrar el picker
+    final permResult = await PermissionService.requestStoragePermission();
+
+    if (!permResult.granted) {
+      if (!mounted) return;
+
+      // Mostrar diálogo explicativo con opción de ir a Configuración
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_outline, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Permiso requerido'),
+            ],
+          ),
+          content: Text(
+            permResult.errorMessage ??
+                'Se necesita permiso de almacenamiento para '
+                    'seleccionar una carpeta externa.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                openAppSettings(); // Abre ajustes de la app
+              },
+              child: const Text('Ir a Configuración'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 2. Mostrar el selector de carpeta
     final result = await FilePicker.platform.getDirectoryPath(
       dialogTitle: 'Seleccionar carpeta de almacenamiento',
     );
+
     if (result != null && mounted) {
+      // 3. Verificar que realmente podemos escribir en esa ruta
+      final testFile = File('$result/.ascs_write_test');
+      try {
+        await testFile.writeAsString('test');
+        await testFile.delete();
+      } catch (_) {
+        if (!mounted) return;
+        _showSnack(
+          '⚠️ No tienes permiso de escritura en esa carpeta. '
+          'Elige otra ubicación.',
+          Colors.orange.shade700,
+        );
+        return;
+      }
+
       await StoragePreferenceService.setLocalStoragePath(result);
       setState(() => _currentCustomPath = result);
       _showSnack(

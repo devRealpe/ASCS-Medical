@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../core/services/permission_service.dart';
 import '../../../core/services/storage_preference_service.dart';
 
 /// Contrato para almacenamiento local
@@ -33,19 +34,54 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
 
   final _uuid = const Uuid();
 
+  /// Determina si la ruta apunta a almacenamiento externo (fuera del sandbox).
+  bool _esRutaExterna(String path) {
+    return path.startsWith('/storage/') ||
+        path.startsWith('/sdcard/') ||
+        path.startsWith('/mnt/');
+  }
+
   /// Obtiene el directorio base:
   /// - Si el usuario configuró una ruta personalizada y existe → la usa
-  /// - Si no → usa getApplicationDocumentsDirectory() como antes
+  ///   (previa verificación de permisos si es externa).
+  /// - Si no → usa getApplicationDocumentsDirectory() como fallback.
   Future<Directory> _obtenerDirectorioBase() async {
     final customPath = await StoragePreferenceService.getLocalStoragePath();
 
     if (customPath != null && customPath.isNotEmpty) {
+      // Si la ruta es externa, verificar/solicitar permisos primero
+      if (_esRutaExterna(customPath)) {
+        final hasPermission = await PermissionService.hasStoragePermission();
+        if (!hasPermission) {
+          final result = await PermissionService.requestStoragePermission();
+          if (!result.granted) {
+            throw FileException(
+              result.errorMessage ??
+                  'Sin permiso para acceder al almacenamiento externo. '
+                      'Cambia la carpeta o usa el almacenamiento interno.',
+            );
+          }
+        }
+      }
+
       final customDir = Directory(customPath);
       if (await customDir.exists()) {
         return customDir;
       }
-      // Si la ruta guardada ya no existe, limpiarla y usar la por defecto
-      await StoragePreferenceService.clearLocalStoragePath();
+
+      // Intentar crear la carpeta si no existe (para rutas donde sí tenemos permiso)
+      try {
+        await customDir.create(recursive: true);
+        return customDir;
+      } catch (e) {
+        // Si falla la creación, limpiar y usar la por defecto
+        await StoragePreferenceService.clearLocalStoragePath();
+        throw FileException(
+          'No se pudo acceder a la carpeta seleccionada: $customPath\n'
+          'Se usará el almacenamiento interno. '
+          'Selecciona una carpeta diferente en la configuración.',
+        );
+      }
     }
 
     return await getApplicationDocumentsDirectory();
@@ -88,13 +124,34 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
       if (!audioFile.existsSync()) {
         throw const FileException('El archivo de audio no existe');
       }
+
       final dirAudios = await _obtenerDirAudios();
       final destino = File('${dirAudios.path}/$fileName');
-      await audioFile.copy(destino.path);
+
+      // Usar writeAsBytes en lugar de copy para mayor compatibilidad
+      // entre particiones de Android (evita el errno=1 cross-partition)
+      final bytes = await audioFile.readAsBytes();
+      await destino.writeAsBytes(bytes, flush: true);
+
       return destino.path;
     } on FileException {
       rethrow;
     } catch (e) {
+      // Mejorar el mensaje de error para orientar al usuario
+      final msg = e.toString();
+      if (msg.contains('Operation not permitted') ||
+          msg.contains('errno = 1')) {
+        throw FileException(
+          'Sin permisos para guardar en la carpeta seleccionada.\n'
+          'Ve a Configuración de almacenamiento y selecciona '
+          'una carpeta diferente, o usa el almacenamiento interno.',
+        );
+      }
+      if (msg.contains('No space left') || msg.contains('errno = 28')) {
+        throw const FileException(
+          'No hay espacio suficiente en el dispositivo.',
+        );
+      }
       throw FileException('Error al guardar audio localmente: $e');
     }
   }
@@ -112,7 +169,16 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
         const JsonEncoder.withIndent('  ').convert(metadata),
         flush: true,
       );
+    } on FileException {
+      rethrow;
     } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('Operation not permitted') ||
+          msg.contains('errno = 1')) {
+        throw const FileException(
+          'Sin permisos para guardar en la carpeta seleccionada.',
+        );
+      }
       throw FileException('Error al guardar metadata localmente: $e');
     }
   }

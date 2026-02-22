@@ -46,6 +46,8 @@ dependencies:
   # Conectividad
   connectivity_plus: ^6.1.2
 
+  permission_handler: ^11.3.1
+
   # State Management - BLoC
   flutter_bloc: ^8.1.6
   bloc: ^8.1.4
