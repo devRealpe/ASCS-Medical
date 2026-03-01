@@ -17,6 +17,9 @@ import 'widgets/form_header.dart';
 import 'widgets/form_fields.dart';
 import 'widgets/form_audio_picker.dart';
 import 'widgets/upload_overlay.dart';
+import '../../../../core/services/storage_preference_service.dart';
+import '../../../core/services/permission_service.dart';
+import 'package:file_picker/file_picker.dart'; // ← AGREGAR
 
 class FormularioPage extends StatelessWidget {
   const FormularioPage({super.key});
@@ -233,6 +236,45 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
+    // ── Validar que haya carpeta de almacenamiento configurada (modo local) ──
+    final storageMode = await StoragePreferenceService.getStorageMode();
+    if (storageMode == StorageMode.local) {
+      final customPath = await StoragePreferenceService.getLocalStoragePath();
+      if (customPath == null || customPath.isEmpty) {
+        if (!mounted) return;
+        // Mostrar mensaje y abrir selector de carpeta automáticamente
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.folder_off, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Debes configurar una carpeta de almacenamiento antes de guardar.',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: MedicalColors.warningOrange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        // Abrir el bottom sheet de almacenamiento
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => _StorageOptionsSheetWrapper(
+            onPathConfigured: () {},
+          ),
+        );
+        return; // No continuar con el envío
+      }
+    }
+
+    // ── Validaciones normales del formulario ──
     if (!_formKey.currentState!.validate()) {
       _showError(AppConstants.errorCamposIncompletos);
       return;
@@ -263,7 +305,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       return;
     }
 
-    // Resolver código de categoría si aplica
     String? codigoCat;
     if (_categoriaAnomalia != null) {
       codigoCat = config.getCategoriaPorNombre(_categoriaAnomalia!)?.codigo;
@@ -405,9 +446,12 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                   style: TextStyle(
                       fontWeight: FontWeight.bold, color: Colors.orange)),
               SizedBox(height: 8),
-              Text('• Se requiere conexión a Internet estable'),
-              Text('• Los archivos pueden tardar en subirse'),
-              Text('• No cierres la app durante la subida'),
+              Text(
+                  '• No se permite guardar la información de los archivos sin configurar carpeta de almacenamiento'),
+              //Text('• Se requiere conexión a Internet estable'),
+              Text(
+                  '• Los archivos pueden tardar en guardarse dependiendo de su tamaño'),
+              Text('• No cierres la app durante el proceso de guardado'),
             ],
           ),
         ),
@@ -417,6 +461,248 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             child: const Text('Entendido'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Wrapper para abrir el StorageOptionsSheet desde formulario_page
+/// sin depender del estado interno de StorageToggleWidget
+class _StorageOptionsSheetWrapper extends StatefulWidget {
+  final VoidCallback onPathConfigured;
+
+  const _StorageOptionsSheetWrapper({required this.onPathConfigured});
+
+  @override
+  State<_StorageOptionsSheetWrapper> createState() =>
+      _StorageOptionsSheetWrapperState();
+}
+
+class _StorageOptionsSheetWrapperState
+    extends State<_StorageOptionsSheetWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    return _FolderRequiredSheet(
+      onFolderSelected: () {
+        widget.onPathConfigured();
+        Navigator.pop(context);
+      },
+    );
+  }
+}
+
+/// Sheet que se muestra cuando el usuario intenta enviar sin carpeta configurada
+class _FolderRequiredSheet extends StatefulWidget {
+  final VoidCallback onFolderSelected;
+
+  const _FolderRequiredSheet({required this.onFolderSelected});
+
+  @override
+  State<_FolderRequiredSheet> createState() => _FolderRequiredSheetState();
+}
+
+class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
+  String? _currentPath;
+  bool _loading = false;
+
+  String _formatPath(String path) {
+    final parts = path.replaceAll('\\', '/').split('/');
+    if (parts.length <= 3) return path;
+    return '.../${parts[parts.length - 2]}/${parts.last}';
+  }
+
+  Future<void> _pickFolder() async {
+    // Solicitar permisos
+    final permResult = await PermissionService.requestStoragePermission();
+    if (!permResult.granted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(permResult.errorMessage ?? 'Permiso denegado'),
+        backgroundColor: MedicalColors.errorRed,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Seleccionar carpeta de almacenamiento',
+    );
+
+    setState(() => _loading = false);
+
+    if (result != null && mounted) {
+      // Verificar escritura
+      final testFile = File('$result/.ascs_write_test');
+      try {
+        await testFile.writeAsString('test');
+        await testFile.delete();
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('⚠️ No tienes permiso de escritura en esa carpeta.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ));
+        return;
+      }
+
+      await StoragePreferenceService.setLocalStoragePath(result);
+      setState(() => _currentPath = result);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('✅ Carpeta configurada. Ahora puedes enviar el formulario.'),
+          backgroundColor: MedicalColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+        ));
+        widget.onFolderSelected();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Ícono de advertencia
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: MedicalColors.warningOrange
+                      .withAlpha((0.1 * 255).toInt()),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.folder_off_rounded,
+                  color: MedicalColors.warningOrange,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              const Text(
+                'Carpeta requerida',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: MedicalColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Para guardar los sonidos cardíacos localmente, debes seleccionar '
+                'una carpeta en tu dispositivo donde se almacenarán los archivos.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Mostrar ruta si ya fue seleccionada
+              if (_currentPath != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: MedicalColors.successGreen
+                        .withAlpha((0.08 * 255).toInt()),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: MedicalColors.successGreen
+                          .withAlpha((0.3 * 255).toInt()),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: MedicalColors.successGreen, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _formatPath(_currentPath!),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: MedicalColors.successGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Botón principal
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : _pickFolder,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.folder_open_rounded),
+                  label: Text(
+                    _currentPath == null
+                        ? 'Seleccionar carpeta'
+                        : 'Cambiar carpeta',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MedicalColors.primaryBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

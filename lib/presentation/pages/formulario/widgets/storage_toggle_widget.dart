@@ -1,5 +1,11 @@
 // lib/presentation/pages/formulario/widgets/storage_toggle_widget.dart
 
+// storage_toggle_widget.dart - Imports que faltan
+
+import 'dart:io'; // ← Para File
+import 'package:permission_handler/permission_handler.dart' // ← Para openAppSettings
+    show
+        openAppSettings;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/services/storage_preference_service.dart';
