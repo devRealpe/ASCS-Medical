@@ -2,7 +2,13 @@
 
 import '../../domain/entities/audio_metadata.dart';
 
-/// Modelo de datos para AudioMetadata con serialización JSON
+/// Modelo de datos para AudioMetadata con serialización JSON.
+///
+/// En modo **local** los campos `nombreAudio*` contienen el nombre del archivo
+/// (ej: `SC_20240101_0101_01_N_ABCD12345678.wav`).
+///
+/// En modo **nube** los campos `nombreAudio*` contienen la URL pública en S3
+/// (ej: `https://bucket.s3.region.amazonaws.com/public/Audios/SC_....wav`).
 class AudioMetadataModel extends AudioMetadata {
   const AudioMetadataModel({
     required super.fechaNacimiento,
@@ -27,7 +33,9 @@ class AudioMetadataModel extends AudioMetadata {
     super.codigoCategoriaAnomalia,
   });
 
-  /// Crea un modelo desde JSON
+  // ── Deserialización ───────────────────────────────────────────────────────
+
+  /// Crea un modelo desde JSON (soporta tanto nombres como URLs en [archivos]).
   factory AudioMetadataModel.fromJson(Map<String, dynamic> json) {
     final metadata = json['metadata'] as Map<String, dynamic>;
     final archivos = json['archivos'] as Map<String, dynamic>;
@@ -60,14 +68,15 @@ class AudioMetadataModel extends AudioMetadata {
     );
   }
 
-  /// Convierte el modelo a JSON
+  // ── Serialización ─────────────────────────────────────────────────────────
+
+  /// Convierte el modelo a JSON.
   ///
-  /// La sección [archivos] referencia los 4 archivos distribuidos en sus
-  /// respectivas carpetas:
-  ///   - Audios/   → audio_principal
-  ///   - ECG/      → audio_ecg
-  ///   - ECG_1/    → audio_ecg_1
-  ///   - ECG_2/    → audio_ecg_2
+  /// La sección [archivos] contendrá:
+  /// - En modo **local**: nombres de archivo
+  ///   (`SC_20240101_0101_01_N_ABCD12345678.wav`)
+  /// - En modo **nube**: URLs públicas de S3
+  ///   (`https://bucket.s3.region.amazonaws.com/public/Audios/SC_....wav`)
   Map<String, dynamic> toJson() {
     return {
       'metadata': {
@@ -103,7 +112,8 @@ class AudioMetadataModel extends AudioMetadata {
     };
   }
 
-  /// Crea una copia del modelo con campos actualizados
+  // ── copyWith ──────────────────────────────────────────────────────────────
+
   AudioMetadataModel copyWith({
     DateTime? fechaNacimiento,
     int? edad,
