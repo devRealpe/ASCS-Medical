@@ -1,4 +1,11 @@
 // lib/presentation/pages/formulario/formulario_page.dart
+// (Solo se muestran las secciones modificadas respecto al original)
+//
+// CAMBIOS:
+//   1. _audioFilePath → _zipFilePath  (variable de estado)
+//   2. Validación comprueba que el archivo termina en .zip
+//   3. EnviarFormularioEvent usa zipFile: en lugar de audioFile:
+//   4. _resetForm limpia _zipFilePath
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -19,7 +26,7 @@ import 'widgets/form_audio_picker.dart';
 import 'widgets/upload_overlay.dart';
 import '../../../../core/services/storage_preference_service.dart';
 import '../../../core/services/permission_service.dart';
-import 'package:file_picker/file_picker.dart'; // ← AGREGAR
+import 'package:file_picker/file_picker.dart';
 
 class FormularioPage extends StatelessWidget {
   const FormularioPage({super.key});
@@ -56,7 +63,9 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   String? _focoAuscultacion;
   DateTime? _selectedDate;
   String? _observaciones;
-  String? _audioFilePath;
+
+  /// Ruta al archivo ZIP seleccionado (contiene los 4 WAV)
+  String? _zipFilePath;
 
   // Nuevos campos
   String? _genero;
@@ -149,14 +158,12 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               onEstadoChanged: (v) {
                 setState(() {
                   _estado = v;
-                  // Limpiar categoría si cambia a Normal
                   if (v == 'Normal') _categoriaAnomalia = null;
                 });
               },
               onFocoChanged: (v) => setState(() => _focoAuscultacion = v),
               onDateChanged: (v) => setState(() => _selectedDate = v),
               onObservacionesChanged: (v) => _observaciones = v,
-              // Nuevos callbacks
               onGeneroChanged: (v) => setState(() => _genero = v),
               onPesoChanged: (v) => _pesoCkg = v,
               onAlturaChanged: (v) => _alturaCm = v,
@@ -167,7 +174,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             FormAudioPicker(
               key: _audioPickerKey,
               onFileSelected: (filePath) =>
-                  setState(() => _audioFilePath = filePath),
+                  setState(() => _zipFilePath = filePath),
             ),
             const SizedBox(height: 32),
             _buildSubmitButton(),
@@ -236,13 +243,12 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
-    // ── Validar que haya carpeta de almacenamiento configurada (modo local) ──
+    // ── Validar carpeta de almacenamiento (modo local) ──
     final storageMode = await StoragePreferenceService.getStorageMode();
     if (storageMode == StorageMode.local) {
       final customPath = await StoragePreferenceService.getLocalStoragePath();
       if (customPath == null || customPath.isEmpty) {
         if (!mounted) return;
-        // Mostrar mensaje y abrir selector de carpeta automáticamente
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(
@@ -261,7 +267,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             duration: const Duration(seconds: 3),
           ),
         );
-        // Abrir el bottom sheet de almacenamiento
         await showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -270,18 +275,25 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             onPathConfigured: () {},
           ),
         );
-        return; // No continuar con el envío
+        return;
       }
     }
 
-    // ── Validaciones normales del formulario ──
+    // ── Validaciones del formulario ──
     if (!_formKey.currentState!.validate()) {
       _showError(AppConstants.errorCamposIncompletos);
       return;
     }
 
-    if (_audioFilePath == null || !File(_audioFilePath!).existsSync()) {
-      _showError(AppConstants.errorArchivoNoSeleccionado);
+    // Validar que se haya seleccionado un ZIP válido
+    if (_zipFilePath == null || !File(_zipFilePath!).existsSync()) {
+      _showError('Debes seleccionar un archivo ZIP válido (.zip)');
+      return;
+    }
+
+    if (!_zipFilePath!.toLowerCase().endsWith('.zip')) {
+      _showError(
+          'El archivo seleccionado debe ser un ZIP que contenga los 4 sonidos cardíacos');
       return;
     }
 
@@ -323,7 +335,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             focoAuscultacion: _focoAuscultacion!,
             codigoFoco: focoEntity.codigo,
             observaciones: _observaciones,
-            audioFile: File(_audioFilePath!),
+            zipFile: File(_zipFilePath!), // ← ZIP en lugar de WAV
             genero: _genero!,
             pesoCkg: _pesoCkg!,
             alturaCm: _alturaCm!,
@@ -358,7 +370,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       _focoAuscultacion = null;
       _selectedDate = null;
       _observaciones = null;
-      _audioFilePath = null;
+      _zipFilePath = null; // ← era _audioFilePath
       _genero = null;
       _pesoCkg = null;
       _alturaCm = null;
@@ -419,7 +431,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Complete el formulario para etiquetar el sonido cardíaco del paciente.',
+                'Complete el formulario para etiquetar los sonidos cardíacos del paciente.',
                 style: TextStyle(fontSize: 15),
               ),
               SizedBox(height: 16),
@@ -435,7 +447,15 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               Text('• Estado del sonido'),
               Text('• Categoría de anomalía (si es Anormal)'),
               Text('• Foco de auscultación'),
-              Text('• Archivo de audio (.wav)'),
+              Text('• Archivo ZIP con los 4 sonidos cardíacos'),
+              SizedBox(height: 16),
+              Text('Estructura del ZIP:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• Sin sufijo  → carpeta Audios/'),
+              Text('• _ECG        → carpeta ECG/'),
+              Text('• _ECG_1      → carpeta ECG_1/'),
+              Text('• _ECG_2      → carpeta ECG_2/'),
               SizedBox(height: 16),
               Text('Campo opcional:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -447,10 +467,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                       fontWeight: FontWeight.bold, color: Colors.orange)),
               SizedBox(height: 8),
               Text(
-                  '• No se permite guardar la información de los archivos sin configurar carpeta de almacenamiento'),
-              //Text('• Se requiere conexión a Internet estable'),
-              Text(
-                  '• Los archivos pueden tardar en guardarse dependiendo de su tamaño'),
+                  '• Configura una carpeta de almacenamiento antes de guardar'),
+              Text('• El ZIP debe contener exactamente 4 archivos WAV'),
               Text('• No cierres la app durante el proceso de guardado'),
             ],
           ),
@@ -466,8 +484,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 }
 
-/// Wrapper para abrir el StorageOptionsSheet desde formulario_page
-/// sin depender del estado interno de StorageToggleWidget
+// ─── Wrappers del bottom sheet (sin cambios funcionales) ──────────────────────
+
 class _StorageOptionsSheetWrapper extends StatefulWidget {
   final VoidCallback onPathConfigured;
 
@@ -491,7 +509,6 @@ class _StorageOptionsSheetWrapperState
   }
 }
 
-/// Sheet que se muestra cuando el usuario intenta enviar sin carpeta configurada
 class _FolderRequiredSheet extends StatefulWidget {
   final VoidCallback onFolderSelected;
 
@@ -512,7 +529,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
   }
 
   Future<void> _pickFolder() async {
-    // Solicitar permisos
     final permResult = await PermissionService.requestStoragePermission();
     if (!permResult.granted) {
       if (!mounted) return;
@@ -533,7 +549,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
     setState(() => _loading = false);
 
     if (result != null && mounted) {
-      // Verificar escritura
       final testFile = File('$result/.ascs_write_test');
       try {
         await testFile.writeAsString('test');
@@ -582,7 +597,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40,
@@ -594,8 +608,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Ícono de advertencia
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -610,7 +622,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-
               const Text(
                 'Carpeta requerida',
                 style: TextStyle(
@@ -631,8 +642,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Mostrar ruta si ya fue seleccionada
               if (_currentPath != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -665,8 +674,6 @@ class _FolderRequiredSheetState extends State<_FolderRequiredSheet> {
                 ),
                 const SizedBox(height: 16),
               ],
-
-              // Botón principal
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

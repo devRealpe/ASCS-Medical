@@ -28,18 +28,17 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     EnviarFormularioEvent event,
     Emitter<FormularioState> emit,
   ) async {
-    // Determinar el modo de almacenamiento actual
     final storageMode = await StoragePreferenceService.getStorageMode();
     final isLocalMode = storageMode == StorageMode.local;
 
     if (isLocalMode) {
-      // Modo local: no necesita verificación de conectividad
       await _enviarLocal(event, emit);
     } else {
-      // Modo nube: verificar conectividad
       await _enviarNube(event, emit);
     }
   }
+
+  // ── Modo LOCAL ────────────────────────────────────────────────────────────
 
   Future<void> _enviarLocal(
     EnviarFormularioEvent event,
@@ -50,9 +49,8 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       status: 'Preparando almacenamiento local...',
     ));
 
-    // Generar nombre de archivo con UUID único verificado localmente
     emit(const FormularioEnviando(
-      progress: 0.05,
+      progress: 0.03,
       status: 'Generando identificador único...',
     ));
 
@@ -66,18 +64,23 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     );
 
     await nombreArchivoResult.fold(
-      (failure) async {
-        emit(FormularioError(mensaje: failure.message));
-      },
+      (failure) async => emit(FormularioError(mensaje: failure.message)),
       (fileName) async {
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
 
+        // Los nombres reales de los 4 archivos se asignan dentro del repositorio
+        // después de guardar; aquí usamos el baseFileName como placeholder.
+        final baseFileName = fileName.replaceAll('.wav', '');
         final metadata = AudioMetadata(
           fechaNacimiento: event.fechaNacimiento,
           edad: edad,
           fechaGrabacion: DateTime.now(),
-          urlAudio: '', // Se llenará con la ruta local
+          // Placeholders: el repositorio los reemplaza al guardar
+          nombreAudioPrincipal: '$baseFileName.wav',
+          nombreAudioEcg: '${baseFileName}_ECG.wav',
+          nombreAudioEcg1: '${baseFileName}_ECG_1.wav',
+          nombreAudioEcg2: '${baseFileName}_ECG_2.wav',
           hospital: event.hospital,
           codigoHospital: event.codigoHospital,
           consultorio: event.consultorio,
@@ -100,7 +103,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
 
         final result = await enviarFormularioUseCase(
           formulario: formulario,
-          audioFile: event.audioFile,
+          zipFile: event.zipFile,
           onProgress: (progress, status) {
             emit(FormularioEnviando(
               progress: 0.05 + (progress * 0.95),
@@ -119,11 +122,12 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     );
   }
 
+  // ── Modo NUBE ─────────────────────────────────────────────────────────────
+
   Future<void> _enviarNube(
     EnviarFormularioEvent event,
     Emitter<FormularioState> emit,
   ) async {
-    // 1. Verificar conectividad REAL antes de iniciar
     emit(const FormularioEnviando(
       progress: 0.0,
       status: 'Verificando conexión a Internet...',
@@ -141,7 +145,6 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       return;
     }
 
-    // 2. Verificar calidad de conexión
     final quality = await networkInfo.connectionQuality;
 
     if (quality == ConnectionQuality.veryPoor) {
@@ -159,7 +162,6 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       await Future.delayed(const Duration(seconds: 1));
     }
 
-    // 3. Generar nombre de archivo
     emit(const FormularioEnviando(
       progress: 0.05,
       status: 'Generando identificador único...',
@@ -175,18 +177,20 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     );
 
     await nombreArchivoResult.fold(
-      (failure) async {
-        emit(FormularioError(mensaje: failure.message));
-      },
+      (failure) async => emit(FormularioError(mensaje: failure.message)),
       (fileName) async {
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
 
+        final baseFileName = fileName.replaceAll('.wav', '');
         final metadata = AudioMetadata(
           fechaNacimiento: event.fechaNacimiento,
           edad: edad,
           fechaGrabacion: DateTime.now(),
-          urlAudio: '',
+          nombreAudioPrincipal: '$baseFileName.wav',
+          nombreAudioEcg: '${baseFileName}_ECG.wav',
+          nombreAudioEcg1: '${baseFileName}_ECG_1.wav',
+          nombreAudioEcg2: '${baseFileName}_ECG_2.wav',
           hospital: event.hospital,
           codigoHospital: event.codigoHospital,
           consultorio: event.consultorio,
@@ -209,7 +213,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
 
         final result = await enviarFormularioUseCase(
           formulario: formulario,
-          audioFile: event.audioFile,
+          zipFile: event.zipFile,
           onProgress: (progress, status) {
             emit(FormularioEnviando(
               progress: 0.05 + (progress * 0.95),

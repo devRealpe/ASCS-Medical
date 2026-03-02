@@ -8,7 +8,10 @@ class AudioMetadataModel extends AudioMetadata {
     required super.fechaNacimiento,
     required super.edad,
     required super.fechaGrabacion,
-    required super.urlAudio,
+    required super.nombreAudioPrincipal,
+    required super.nombreAudioEcg,
+    required super.nombreAudioEcg1,
+    required super.nombreAudioEcg2,
     required super.hospital,
     required super.codigoHospital,
     required super.consultorio,
@@ -27,6 +30,7 @@ class AudioMetadataModel extends AudioMetadata {
   /// Crea un modelo desde JSON
   factory AudioMetadataModel.fromJson(Map<String, dynamic> json) {
     final metadata = json['metadata'] as Map<String, dynamic>;
+    final archivos = json['archivos'] as Map<String, dynamic>;
     final ubicacion = json['ubicacion'] as Map<String, dynamic>;
     final diagnostico = json['diagnostico'] as Map<String, dynamic>;
     final paciente = json['paciente'] as Map<String, dynamic>;
@@ -35,7 +39,10 @@ class AudioMetadataModel extends AudioMetadata {
       fechaNacimiento: DateTime.parse(metadata['fecha_nacimiento'] as String),
       edad: metadata['edad'] as int,
       fechaGrabacion: DateTime.parse(metadata['fecha_grabacion'] as String),
-      urlAudio: metadata['url_audio'] as String,
+      nombreAudioPrincipal: archivos['audio_principal'] as String,
+      nombreAudioEcg: archivos['audio_ecg'] as String,
+      nombreAudioEcg1: archivos['audio_ecg_1'] as String,
+      nombreAudioEcg2: archivos['audio_ecg_2'] as String,
       hospital: ubicacion['hospital'] as String,
       codigoHospital: ubicacion['codigo_hospital'] as String,
       consultorio: ubicacion['consultorio'] as String,
@@ -54,13 +61,25 @@ class AudioMetadataModel extends AudioMetadata {
   }
 
   /// Convierte el modelo a JSON
+  ///
+  /// La sección [archivos] referencia los 4 archivos distribuidos en sus
+  /// respectivas carpetas:
+  ///   - Audios/   → audio_principal
+  ///   - ECG/      → audio_ecg
+  ///   - ECG_1/    → audio_ecg_1
+  ///   - ECG_2/    → audio_ecg_2
   Map<String, dynamic> toJson() {
     return {
       'metadata': {
         'fecha_nacimiento': fechaNacimiento.toIso8601String(),
         'edad': edad,
         'fecha_grabacion': fechaGrabacion.toIso8601String(),
-        'url_audio': urlAudio,
+      },
+      'archivos': {
+        'audio_principal': nombreAudioPrincipal,
+        'audio_ecg': nombreAudioEcg,
+        'audio_ecg_1': nombreAudioEcg1,
+        'audio_ecg_2': nombreAudioEcg2,
       },
       'ubicacion': {
         'hospital': hospital,
@@ -89,7 +108,10 @@ class AudioMetadataModel extends AudioMetadata {
     DateTime? fechaNacimiento,
     int? edad,
     DateTime? fechaGrabacion,
-    String? urlAudio,
+    String? nombreAudioPrincipal,
+    String? nombreAudioEcg,
+    String? nombreAudioEcg1,
+    String? nombreAudioEcg2,
     String? hospital,
     String? codigoHospital,
     String? consultorio,
@@ -108,7 +130,10 @@ class AudioMetadataModel extends AudioMetadata {
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
       edad: edad ?? this.edad,
       fechaGrabacion: fechaGrabacion ?? this.fechaGrabacion,
-      urlAudio: urlAudio ?? this.urlAudio,
+      nombreAudioPrincipal: nombreAudioPrincipal ?? this.nombreAudioPrincipal,
+      nombreAudioEcg: nombreAudioEcg ?? this.nombreAudioEcg,
+      nombreAudioEcg1: nombreAudioEcg1 ?? this.nombreAudioEcg1,
+      nombreAudioEcg2: nombreAudioEcg2 ?? this.nombreAudioEcg2,
       hospital: hospital ?? this.hospital,
       codigoHospital: codigoHospital ?? this.codigoHospital,
       consultorio: consultorio ?? this.consultorio,

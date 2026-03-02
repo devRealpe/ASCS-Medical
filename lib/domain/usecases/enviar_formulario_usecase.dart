@@ -6,25 +6,25 @@ import '../../core/errors/failures.dart';
 import '../entities/formulario_completo.dart';
 import '../repositories/formulario_repository.dart';
 
-/// Caso de uso para enviar un formulario completo
+/// Caso de uso para enviar un formulario completo con su ZIP de audios
 class EnviarFormularioUseCase {
   final FormularioRepository repository;
 
   EnviarFormularioUseCase({required this.repository});
 
-  /// Ejecuta el caso de uso
+  /// Ejecuta el caso de uso.
   ///
-  /// [formulario] El formulario completo a enviar
-  /// [audioFile] El archivo de audio físico
-  /// [onProgress] Callback opcional para reportar progreso
+  /// [formulario] Formulario completo a enviar.
+  /// [zipFile]    Archivo ZIP con los 4 sonidos cardíacos.
+  /// [onProgress] Callback opcional para reportar progreso.
   Future<Either<Failure, void>> call({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required File zipFile,
     void Function(double progress, String status)? onProgress,
   }) async {
     return await repository.enviarFormulario(
       formulario: formulario,
-      audioFile: audioFile,
+      zipFile: zipFile,
       onProgress: onProgress,
     );
   }

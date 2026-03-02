@@ -59,6 +59,9 @@ dependencies:
   # Inyección de dependencias
   get_it: ^8.0.2
 
+  # Extracción de archivos ZIP
+  archive: ^3.6.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

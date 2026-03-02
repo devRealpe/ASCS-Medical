@@ -10,7 +10,7 @@ abstract class FormularioEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Evento para enviar el formulario completo
+/// Evento para enviar el formulario completo con un ZIP de 4 audios
 class EnviarFormularioEvent extends FormularioEvent {
   final DateTime fechaNacimiento;
   final String hospital;
@@ -21,9 +21,11 @@ class EnviarFormularioEvent extends FormularioEvent {
   final String focoAuscultacion;
   final String codigoFoco;
   final String? observaciones;
-  final File audioFile;
 
-  // Nuevos campos
+  /// Archivo ZIP que contiene los 4 sonidos cardíacos
+  final File zipFile;
+
+  // Datos del paciente
   final String genero;
   final double pesoCkg;
   final double alturaCm;
@@ -42,10 +44,10 @@ class EnviarFormularioEvent extends FormularioEvent {
     required this.genero,
     required this.pesoCkg,
     required this.alturaCm,
+    required this.zipFile,
     this.observaciones,
     this.categoriaAnomalia,
     this.codigoCategoriaAnomalia,
-    required this.audioFile,
   });
 
   @override
@@ -59,7 +61,7 @@ class EnviarFormularioEvent extends FormularioEvent {
         focoAuscultacion,
         codigoFoco,
         observaciones,
-        audioFile,
+        zipFile,
         genero,
         pesoCkg,
         alturaCm,

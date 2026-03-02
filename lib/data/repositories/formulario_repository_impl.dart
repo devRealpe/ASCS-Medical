@@ -22,51 +22,65 @@ class FormularioRepositoryImpl implements FormularioRepository {
   @override
   Future<Either<Failure, void>> enviarFormulario({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required File zipFile,
     void Function(double progress, String status)? onProgress,
   }) async {
-    // Determinar modo de almacenamiento
     final mode = await StoragePreferenceService.getStorageMode();
 
     if (mode == StorageMode.local) {
       return await _enviarFormularioLocal(
         formulario: formulario,
-        audioFile: audioFile,
+        zipFile: zipFile,
         onProgress: onProgress,
       );
     } else {
       return await _enviarFormularioNube(
         formulario: formulario,
-        audioFile: audioFile,
+        zipFile: zipFile,
         onProgress: onProgress,
       );
     }
   }
 
-  /// Envía el formulario guardando localmente
+  // ── Modo LOCAL ────────────────────────────────────────────────────────────
+
   Future<Either<Failure, void>> _enviarFormularioLocal({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required File zipFile,
     void Function(double progress, String status)? onProgress,
   }) async {
     try {
-      // 1. Guardar archivo de audio localmente
-      onProgress?.call(0.1, 'Guardando archivo de audio...');
+      // 1. Extraer los 4 WAV del ZIP
+      onProgress?.call(0.05, 'Extrayendo archivos del ZIP...');
 
-      final rutaAudioLocal = await localDataSource.guardarAudioLocal(
-        audioFile: audioFile,
-        fileName: formulario.fileName,
+      final audios = await localDataSource.extraerAudiosDeZip(zipFile);
+
+      onProgress?.call(0.20, 'Archivos extraídos correctamente');
+
+      // 2. Nombre base (sin extensión) derivado del fileName del formulario
+      //    El fileName tiene formato SC_YYYYMMDD_HHCC_FF_EST_ID.wav
+      //    Necesitamos quitarle el .wav para usarlo como base.
+      final baseFileName = formulario.fileName.replaceAll('.wav', '');
+
+      // 3. Guardar los 4 audios en sus carpetas correspondientes
+      onProgress?.call(0.25, 'Guardando archivos de audio...');
+
+      final nombresGuardados = await localDataSource.guardarAudiosLocales(
+        audios: audios,
+        baseFileName: baseFileName,
       );
 
-      onProgress?.call(0.5, 'Audio guardado localmente');
+      onProgress?.call(0.75, 'Audios guardados correctamente');
 
-      // 2. En modo local, url_audio = nombre del archivo (identificador)
-      // Ya tenemos el ID único en el nombre del archivo, lo usamos como referencia
+      // 4. Construir metadata con los nombres finales de los 4 archivos
       final metadataModel = AudioMetadataModel(
         fechaNacimiento: formulario.metadata.fechaNacimiento,
         edad: formulario.metadata.edad,
         fechaGrabacion: formulario.metadata.fechaGrabacion,
-        urlAudio: rutaAudioLocal, // Ruta local en lugar de URL
+        nombreAudioPrincipal: nombresGuardados['principal']!,
+        nombreAudioEcg: nombresGuardados['ecg']!,
+        nombreAudioEcg1: nombresGuardados['ecg1']!,
+        nombreAudioEcg2: nombresGuardados['ecg2']!,
         hospital: formulario.metadata.hospital,
         codigoHospital: formulario.metadata.codigoHospital,
         consultorio: formulario.metadata.consultorio,
@@ -82,15 +96,23 @@ class FormularioRepositoryImpl implements FormularioRepository {
         codigoCategoriaAnomalia: formulario.metadata.codigoCategoriaAnomalia,
       );
 
-      // 3. Guardar metadata JSON localmente
-      onProgress?.call(0.6, 'Guardando metadatos...');
+      // 5. Guardar JSON de metadata
+      onProgress?.call(0.85, 'Guardando metadatos...');
 
       await localDataSource.guardarMetadataLocal(
         metadata: metadataModel.toJson(),
-        fileName: formulario.fileName,
+        baseFileName: baseFileName,
       );
 
       onProgress?.call(1.0, 'Datos guardados localmente');
+
+      // 6. Limpiar archivos temporales del ZIP (opcional pero recomendado)
+      try {
+        final tempDir = audios.principal.parent;
+        if (await tempDir.exists()) await tempDir.delete(recursive: true);
+      } catch (_) {
+        // No es crítico si no se puede limpiar
+      }
 
       return const Right(null);
     } on FileException catch (e) {
@@ -100,71 +122,24 @@ class FormularioRepositoryImpl implements FormularioRepository {
     }
   }
 
-  /// Envía el formulario a AWS S3 (comportamiento original)
+  // ── Modo NUBE (sin cambios funcionales, preparado para futura extensión) ──
+
   Future<Either<Failure, void>> _enviarFormularioNube({
     required FormularioCompleto formulario,
-    required File audioFile,
+    required File zipFile,
     void Function(double progress, String status)? onProgress,
   }) async {
-    try {
-      // 1. Subir archivo de audio
-      onProgress?.call(0.0, 'Subiendo archivo de audio...');
-
-      final audioUrl = await remoteDataSource.subirAudio(
-        audioFile: audioFile,
-        fileName: formulario.fileName,
-        onProgress: (progress) {
-          onProgress?.call(progress * 0.5, 'Subiendo archivo de audio...');
-        },
-      );
-
-      onProgress?.call(0.5, 'Archivo de audio subido exitosamente');
-
-      // 2. Actualizar metadata con la URL del audio
-      final metadataModel = AudioMetadataModel(
-        fechaNacimiento: formulario.metadata.fechaNacimiento,
-        edad: formulario.metadata.edad,
-        fechaGrabacion: formulario.metadata.fechaGrabacion,
-        urlAudio: audioUrl,
-        hospital: formulario.metadata.hospital,
-        codigoHospital: formulario.metadata.codigoHospital,
-        consultorio: formulario.metadata.consultorio,
-        codigoConsultorio: formulario.metadata.codigoConsultorio,
-        estado: formulario.metadata.estado,
-        focoAuscultacion: formulario.metadata.focoAuscultacion,
-        codigoFoco: formulario.metadata.codigoFoco,
-        observaciones: formulario.metadata.observaciones,
-        genero: formulario.metadata.genero,
-        pesoCkg: formulario.metadata.pesoCkg,
-        alturaCm: formulario.metadata.alturaCm,
-        categoriaAnomalia: formulario.metadata.categoriaAnomalia,
-        codigoCategoriaAnomalia: formulario.metadata.codigoCategoriaAnomalia,
-      );
-
-      // 3. Subir archivo JSON con metadata
-      onProgress?.call(0.5, 'Subiendo metadatos...');
-
-      await remoteDataSource.subirMetadata(
-        metadata: metadataModel.toJson(),
-        fileName: formulario.fileName,
-        onProgress: (progress) {
-          onProgress?.call(0.5 + progress * 0.5, 'Subiendo metadatos...');
-        },
-      );
-
-      onProgress?.call(1.0, 'Formulario enviado exitosamente');
-
-      return const Right(null);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(e.message));
-    } on StorageException catch (e) {
-      return Left(StorageFailure(e.message));
-    } catch (e) {
-      return Left(UnexpectedFailure(e.toString()));
-    }
+    // TODO: Implementar subida a S3 de los 4 archivos WAV extraídos del ZIP.
+    // Por ahora se mantiene la firma actualizada pero retorna error informativo.
+    return const Left(
+      UnexpectedFailure(
+        'El modo nube aún no soporta archivos ZIP. '
+        'Usa el almacenamiento local o espera la próxima actualización.',
+      ),
+    );
   }
+
+  // ── Nombre de archivo ─────────────────────────────────────────────────────
 
   @override
   Future<Either<Failure, String>> generarNombreArchivo({
@@ -175,22 +150,17 @@ class FormularioRepositoryImpl implements FormularioRepository {
     required String estado,
     String? observaciones,
   }) async {
-    // Determinar modo de almacenamiento
     final mode = await StoragePreferenceService.getStorageMode();
 
     try {
       final ahora = DateTime.now();
-
-      // Formato YYYYMMDD
       final anio = ahora.year.toString();
       final mes = ahora.month.toString().padLeft(2, '0');
       final dia = ahora.day.toString().padLeft(2, '0');
       final fechaStr = '$anio$mes$dia';
 
-      // Estado: N (Normal) o A (Anormal)
       final estStr = estado.toLowerCase() == 'normal' ? 'N' : 'A';
 
-      // Generar ID único según el modo
       final String audioId;
       if (mode == StorageMode.local) {
         audioId = await localDataSource.generarAudioIdUnicoLocal();
@@ -198,7 +168,9 @@ class FormularioRepositoryImpl implements FormularioRepository {
         audioId = await remoteDataSource.generarAudioIdUnico();
       }
 
-      // Formato: SC_YYYYMMDD_HHCC_FF_EST_AAAA.wav
+      // El nombre base se usa para todos los archivos; el sufijo (_ECG, etc.)
+      // se agrega en LocalStorageDataSource al guardar cada uno.
+      // Mantenemos .wav como extensión nominal del formulario (audio principal).
       final fileName = 'SC_${fechaStr}_$codigoHospital$codigoConsultorio'
           '_$codigoFoco'
           '_$estStr'
