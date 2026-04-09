@@ -1,7 +1,7 @@
 // lib/core/utils/validators.dart
 
 import 'dart:io';
-import '../constants/app_constants.dart';
+import '../constants/api_constants.dart';
 
 /// Clase de utilidades para validaciones
 class Validators {

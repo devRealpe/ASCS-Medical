@@ -1,4 +1,10 @@
 // lib/injection_container.dart
+//
+// CAMBIOS respecto al original:
+//   1. Se añade AuthBloc + AuthRemoteDataSource
+//   2. ConfigLocalDataSource es reemplazado por ConfigRemoteDataSource
+//      (los datos de hospitales/focos/categorías ahora vienen de la API)
+
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -7,7 +13,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'core/network/network_info.dart';
 
 // Data Sources
-import 'data/datasources/local/config_local_datasource.dart';
+import 'data/datasources/remote/auth_remote_datasource.dart';
+import 'data/datasources/remote/config_remote_datasource.dart';   // ← NUEVO
 import 'data/datasources/local/local_storage_datasource.dart';
 import 'data/datasources/remote/aws_s3_remote_datasource.dart';
 
@@ -25,27 +32,35 @@ import 'domain/usecases/enviar_formulario_usecase.dart';
 import 'domain/usecases/generar_nombre_archivo_usecase.dart';
 
 // BLoCs
+import 'presentation/blocs/auth/auth_bloc.dart';                  // ← NUEVO
 import 'presentation/blocs/config/config_bloc.dart';
 import 'presentation/blocs/formulario/formulario_bloc.dart';
 import 'presentation/blocs/upload/upload_bloc.dart';
 
 final sl = GetIt.instance;
 
-/// Inicializa todas las dependencias de la aplicación
 Future<void> init() async {
   //! Core
 
-  // Network Info
+  sl.registerLazySingleton(() => http.Client());
+  sl.registerLazySingleton(() => Connectivity());
+
   sl.registerLazySingleton<NetworkInfo>(
-    () => NetworkInfoImpl(
-      connectivity: sl(),
-      httpClient: sl(),
-    ),
+    () => NetworkInfoImpl(connectivity: sl(), httpClient: sl()),
   );
 
-  //! Features - Config
+  //! Auth  ──────────────────────────────────────────────────────────────────
 
-  // BLoC
+  sl.registerFactory(
+    () => AuthBloc(authDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSourceImpl(httpClient: sl()),
+  );
+
+  //! Config ─────────────────────────────────────────────────────────────────
+
   sl.registerFactory(
     () => ConfigBloc(
       configRepository: sl(),
@@ -53,26 +68,24 @@ Future<void> init() async {
     ),
   );
 
-  // Use Cases
   sl.registerLazySingleton(() => ObtenerHospitalesUseCase(repository: sl()));
   sl.registerLazySingleton(
-    () => ObtenerConsultoriosPorHospitalUseCase(repository: sl()),
-  );
+      () => ObtenerConsultoriosPorHospitalUseCase(repository: sl()));
   sl.registerLazySingleton(() => ObtenerFocosUseCase(repository: sl()));
 
-  // Repository
   sl.registerLazySingleton<ConfigRepository>(
-    () => ConfigRepositoryImpl(localDataSource: sl()),
+    () => ConfigRepositoryImpl(
+      remoteDataSource: sl(),   // ← antes: localDataSource
+    ),
   );
 
-  // Data Sources
-  sl.registerLazySingleton<ConfigLocalDataSource>(
-    () => ConfigLocalDataSourceImpl(),
+  // ConfigRemoteDataSource reemplaza a ConfigLocalDataSourceImpl
+  sl.registerLazySingleton<ConfigRemoteDataSource>(
+    () => ConfigRemoteDataSourceImpl(httpClient: sl()),
   );
 
-  //! Features - Formulario
+  //! Formulario ─────────────────────────────────────────────────────────────
 
-  // BLoC
   sl.registerFactory(
     () => FormularioBloc(
       enviarFormularioUseCase: sl(),
@@ -83,11 +96,10 @@ Future<void> init() async {
 
   sl.registerFactory(() => UploadBloc());
 
-  // Use Cases
   sl.registerLazySingleton(() => EnviarFormularioUseCase(repository: sl()));
-  sl.registerLazySingleton(() => GenerarNombreArchivoUseCase(repository: sl()));
+  sl.registerLazySingleton(
+      () => GenerarNombreArchivoUseCase(repository: sl()));
 
-  // Repository
   sl.registerLazySingleton<FormularioRepository>(
     () => FormularioRepositoryImpl(
       remoteDataSource: sl(),
@@ -95,7 +107,6 @@ Future<void> init() async {
     ),
   );
 
-  // Data Sources
   sl.registerLazySingleton<AwsS3RemoteDataSource>(
     () => AwsS3RemoteDataSourceImpl(),
   );
@@ -103,10 +114,4 @@ Future<void> init() async {
   sl.registerLazySingleton<LocalStorageDataSource>(
     () => LocalStorageDataSourceImpl(),
   );
-
-  // HTTP Client
-  sl.registerLazySingleton(() => http.Client());
-
-  // Connectivity
-  sl.registerLazySingleton(() => Connectivity());
 }

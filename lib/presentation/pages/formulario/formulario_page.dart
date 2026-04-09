@@ -11,7 +11,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../injection_container.dart' as di;
 import '../../blocs/config/config_bloc.dart';
 import '../../blocs/config/config_event.dart';

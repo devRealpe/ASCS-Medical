@@ -82,7 +82,7 @@ flutter:
 
 flutter_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/icons/Corazon.png"
-  adaptive_icon_background: "#84A0E3"
+  adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icons/Corazon.png"

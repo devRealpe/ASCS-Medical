@@ -1,4 +1,10 @@
 // lib/main.dart
+//
+// CAMBIOS respecto al original:
+//   1. Se agrega AuthBloc como provider global
+//   2. Se define la ruta inicial '/' → LoginRegisterPage
+//   3. Se define la ruta '/formulario' → FormularioPage
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
@@ -8,32 +14,25 @@ import 'package:amplify_storage_s3/amplify_storage_s3.dart';
 import 'amplifyconfiguration.dart';
 import 'injection_container.dart' as di;
 import 'presentation/theme/app_theme.dart';
+import 'presentation/pages/auth/login_register_page.dart';
 import 'presentation/pages/formulario/formulario_page.dart';
+import 'presentation/blocs/auth/auth_bloc.dart';
 import 'presentation/blocs/config/config_bloc.dart';
 import 'presentation/blocs/config/config_event.dart';
 
-/// Punto de entrada principal de la aplicación
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializar Amplify
   await _initializeAmplify();
-
-  // Inicializar inyección de dependencias
   await di.init();
-
   runApp(const MyApp());
 }
 
-/// Configura e inicializa Amplify con Auth y Storage
 Future<void> _initializeAmplify() async {
   try {
     final auth = AmplifyAuthCognito();
     final storage = AmplifyStorageS3();
-
     await Amplify.addPlugins([auth, storage]);
     await Amplify.configure(amplifyconfig);
-
     safePrint('Amplify configurado exitosamente');
   } catch (e) {
     safePrint('Error al configurar Amplify: $e');
@@ -47,25 +46,30 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
-      // Providers globales de BLoC
       providers: [
-        // BLoC de configuración (carga el JSON una sola vez)
+        // BLoC de autenticación (global, persiste durante toda la sesión)
+        BlocProvider<AuthBloc>(
+          create: (_) => di.sl<AuthBloc>(),
+        ),
+        // BLoC de configuración (carga hospitales/focos desde la API)
         BlocProvider<ConfigBloc>(
-          create: (context) =>
+          create: (_) =>
               di.sl<ConfigBloc>()..add(CargarConfiguracionEvent()),
         ),
       ],
       child: MaterialApp(
         title: 'ASCS - Etiquetado Cardíaco',
         debugShowCheckedModeBanner: false,
-
-        // Tema personalizado desde archivo separado
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
 
-        // Página principal
-        home: const FormularioPage(),
+        // Ruta inicial → pantalla de login/registro
+        initialRoute: '/',
+        routes: {
+          '/': (_) => const LoginRegisterPage(),
+          '/formulario': (_) => const FormularioPage(),
+        },
       ),
     );
   }

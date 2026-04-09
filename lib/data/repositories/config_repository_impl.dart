@@ -1,31 +1,35 @@
 // lib/data/repositories/config_repository_impl.dart
+//
+// CAMBIO: el constructor ahora recibe [remoteDataSource] en lugar de
+// [localDataSource].  El resto de la lógica es idéntica.
+
 import 'package:dartz/dartz.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../domain/entities/config/medical_config.dart';
 import '../../domain/entities/config/consultorio.dart';
 import '../../domain/repositories/config_repository.dart';
-import '../datasources/local/config_local_datasource.dart';
+import '../datasources/remote/config_remote_datasource.dart';
 
 class ConfigRepositoryImpl implements ConfigRepository {
-  final ConfigLocalDataSource localDataSource;
+  final ConfigRemoteDataSource remoteDataSource;
 
-  // Cache de la configuración para evitar múltiples lecturas
   MedicalConfig? _cachedConfig;
 
-  ConfigRepositoryImpl({required this.localDataSource});
+  ConfigRepositoryImpl({required this.remoteDataSource});
 
   @override
   Future<Either<Failure, MedicalConfig>> obtenerConfiguracion() async {
-    // Si ya tenemos la configuración en caché, la retornamos
-    if (_cachedConfig != null) {
-      return Right(_cachedConfig!);
-    }
+    if (_cachedConfig != null) return Right(_cachedConfig!);
 
     try {
-      final config = await localDataSource.obtenerConfiguracion();
+      final config = await remoteDataSource.obtenerConfiguracion();
       _cachedConfig = config;
       return Right(config);
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {
@@ -38,23 +42,18 @@ class ConfigRepositoryImpl implements ConfigRepository {
     String codigoHospital,
   ) async {
     try {
-      // Primero obtenemos la configuración
       final configResult = await obtenerConfiguracion();
-
       return configResult.fold(
         (failure) => Left(failure),
         (config) {
-          // Filtramos los consultorios del hospital específico
           final consultorios = config.consultorios
               .where((c) => c.codigoHospital == codigoHospital)
               .toList();
-
           if (consultorios.isEmpty) {
             return Left(
-              CacheFailure('No se encontraron consultorios para el hospital'),
+              CacheFailure('No se encontraron consultorios para esta institución'),
             );
           }
-
           return Right(consultorios);
         },
       );
