@@ -1,8 +1,14 @@
 // lib/presentation/blocs/formulario/formulario_bloc.dart
 
+import 'dart:developer' as developer;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/network/network_info.dart';
+import '../../../core/services/session_service.dart';
 import '../../../core/services/storage_preference_service.dart';
+import '../../../data/datasources/local/local_storage_datasource.dart';
+import '../../../data/datasources/remote/diagnose_remote_datasource.dart';
+import '../../../data/datasources/remote/diagnostico_remote_datasource.dart';
+import '../../../data/datasources/remote/sample_train_remote_datasource.dart';
 import '../../../domain/entities/audio_metadata.dart';
 import '../../../domain/entities/formulario_completo.dart';
 import '../../../domain/usecases/enviar_formulario_usecase.dart';
@@ -14,14 +20,24 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
   final EnviarFormularioUseCase enviarFormularioUseCase;
   final GenerarNombreArchivoUseCase generarNombreArchivoUseCase;
   final NetworkInfo networkInfo;
+  final LocalStorageDataSource localStorageDataSource;
+  final SampleTrainRemoteDataSource sampleTrainRemoteDataSource;
+  final DiagnoseRemoteDataSource diagnoseRemoteDataSource;
+  final DiagnosticoRemoteDataSource diagnosticoRemoteDataSource;
 
   FormularioBloc({
     required this.enviarFormularioUseCase,
     required this.generarNombreArchivoUseCase,
     required this.networkInfo,
+    required this.localStorageDataSource,
+    required this.sampleTrainRemoteDataSource,
+    required this.diagnoseRemoteDataSource,
+    required this.diagnosticoRemoteDataSource,
   }) : super(FormularioInitial()) {
     on<EnviarFormularioEvent>(_onEnviarFormulario);
     on<ResetFormularioEvent>(_onResetFormulario);
+    on<EnviarMuestraEntrenamientoEvent>(_onEnviarMuestraEntrenamiento);
+    on<DiagnosticarAudioEvent>(_onDiagnosticarAudio);
   }
 
   Future<void> _onEnviarFormulario(
@@ -29,12 +45,17 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     Emitter<FormularioState> emit,
   ) async {
     final storageMode = await StoragePreferenceService.getStorageMode();
-    final isLocalMode = storageMode == StorageMode.local;
 
-    if (isLocalMode) {
-      await _enviarLocal(event, emit);
-    } else {
-      await _enviarNube(event, emit);
+    switch (storageMode) {
+      case StorageMode.local:
+        await _enviarLocal(event, emit);
+        break;
+      case StorageMode.cloud:
+        await _enviarNube(event, emit);
+        break;
+      case StorageMode.training:
+        await _enviarEntrenamiento(event, emit);
+        break;
     }
   }
 
@@ -94,6 +115,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
           alturaCm: event.alturaCm,
           categoriaAnomalia: event.categoriaAnomalia,
           codigoCategoriaAnomalia: event.codigoCategoriaAnomalia,
+          enfermedadesBase: event.enfermedadesBase,
         );
 
         final formulario = FormularioCompleto(
@@ -204,6 +226,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
           alturaCm: event.alturaCm,
           categoriaAnomalia: event.categoriaAnomalia,
           codigoCategoriaAnomalia: event.codigoCategoriaAnomalia,
+          enfermedadesBase: event.enfermedadesBase,
         );
 
         final formulario = FormularioCompleto(
@@ -244,7 +267,9 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
 
             emit(FormularioError(mensaje: errorMessage));
           },
-          (_) => emit(const FormularioEnviadoExitosamente()),
+          (_) => emit(const FormularioEnviadoExitosamente(
+            mensaje: 'Datos enviados a la nube exitosamente',
+          )),
         );
       },
     );
@@ -255,5 +280,331 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     Emitter<FormularioState> emit,
   ) {
     emit(FormularioInitial());
+  }
+
+  // ── Modo ENTRENAMIENTO (Servicio 2) — via StorageMode ─────────────────────
+
+  Future<void> _enviarEntrenamiento(
+    EnviarFormularioEvent event,
+    Emitter<FormularioState> emit,
+  ) async {
+    emit(const FormularioEnviando(
+      progress: 0.0,
+      status: 'Verificando conexión a Internet...',
+    ));
+
+    final hasConnection = await networkInfo.isConnected;
+    if (!hasConnection) {
+      emit(const FormularioError(
+        mensaje: 'No hay conexión a Internet. Por favor, verifica:\n'
+            '• Que estés conectado a WiFi o datos móviles\n'
+            '• Que tu conexión tenga acceso a Internet\n'
+            '• Que no estés en modo avión',
+      ));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.05,
+      status: 'Extrayendo archivos de audio del ZIP...',
+    ));
+
+    late ZipAudioFiles audios;
+    try {
+      audios = await localStorageDataSource.extraerAudiosDeZip(event.zipFile);
+    } catch (e) {
+      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.15,
+      status: 'Preparando metadatos...',
+    ));
+
+    final edad = DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
+
+    final metadataJson = {
+      'metadata': {
+        'fecha_nacimiento': event.fechaNacimiento.toIso8601String(),
+        'edad': edad,
+        'fecha_grabacion': DateTime.now().toIso8601String(),
+      },
+      'ubicacion': {
+        'hospital': event.hospital,
+        'codigo_hospital': event.codigoHospital,
+        'consultorio': event.consultorio,
+        'codigo_consultorio': event.codigoConsultorio,
+      },
+      'diagnostico': {
+        'estado': event.estado,
+        'foco_auscultacion': event.focoAuscultacion,
+        'codigo_foco': event.codigoFoco,
+        'observaciones': event.observaciones ?? 'No aplica',
+        'categoria_anomalia': event.categoriaAnomalia,
+        'codigo_categoria_anomalia': event.codigoCategoriaAnomalia,
+      },
+      'paciente': {
+        'genero': event.genero,
+        'peso_kg': event.pesoCkg,
+        'altura_cm': event.alturaCm,
+        'enfermedades_base': event.enfermedadesBase,
+      },
+    };
+
+    try {
+      await sampleTrainRemoteDataSource.enviarMuestra(
+        audios: audios,
+        metadataJson: metadataJson,
+        onStatus: (status) {
+          emit(FormularioEnviando(
+            progress: 0.20,
+            status: status,
+          ));
+        },
+      );
+
+      emit(const FormularioEnviadoExitosamente(
+        mensaje: 'Muestra de entrenamiento enviada exitosamente',
+      ));
+    } catch (e) {
+      emit(FormularioError(
+        mensaje: 'Error al enviar muestra de entrenamiento:\n$e',
+      ));
+    }
+  }
+
+  // ── Modo ENTRENAMIENTO (Servicio 2) — via evento directo ──────────────────
+
+  Future<void> _onEnviarMuestraEntrenamiento(
+    EnviarMuestraEntrenamientoEvent event,
+    Emitter<FormularioState> emit,
+  ) async {
+    emit(const FormularioEnviando(
+      progress: 0.0,
+      status: 'Verificando conexión a Internet...',
+    ));
+
+    final hasConnection = await networkInfo.isConnected;
+    if (!hasConnection) {
+      emit(const FormularioError(
+        mensaje: 'No hay conexión a Internet. Verifica tu red.',
+      ));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.05,
+      status: 'Extrayendo archivos de audio del ZIP...',
+    ));
+
+    late ZipAudioFiles audios;
+    try {
+      audios = await localStorageDataSource.extraerAudiosDeZip(event.zipFile);
+    } catch (e) {
+      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.15,
+      status: 'Preparando metadatos...',
+    ));
+
+    final edad = DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
+
+    final metadataJson = {
+      'metadata': {
+        'fecha_nacimiento': event.fechaNacimiento.toIso8601String(),
+        'edad': edad,
+        'fecha_grabacion': DateTime.now().toIso8601String(),
+      },
+      'ubicacion': {
+        'hospital': event.hospital,
+        'codigo_hospital': event.codigoHospital,
+        'consultorio': event.consultorio,
+        'codigo_consultorio': event.codigoConsultorio,
+      },
+      'diagnostico': {
+        'estado': event.estado,
+        'foco_auscultacion': event.focoAuscultacion,
+        'codigo_foco': event.codigoFoco,
+        'observaciones': event.observaciones ?? 'No aplica',
+        'categoria_anomalia': event.categoriaAnomalia,
+        'codigo_categoria_anomalia': event.codigoCategoriaAnomalia,
+      },
+      'paciente': {
+        'genero': event.genero,
+        'peso_kg': event.pesoCkg,
+        'altura_cm': event.alturaCm,
+        'enfermedades_base': event.enfermedadesBase,
+      },
+    };
+
+    try {
+      await sampleTrainRemoteDataSource.enviarMuestra(
+        audios: audios,
+        metadataJson: metadataJson,
+        onStatus: (status) {
+          emit(FormularioEnviando(
+            progress: 0.20,
+            status: status,
+          ));
+        },
+      );
+
+      emit(const FormularioEnviadoExitosamente(
+        mensaje: 'Muestra de entrenamiento enviada exitosamente',
+      ));
+    } catch (e) {
+      emit(FormularioError(
+        mensaje: 'Error al enviar muestra de entrenamiento:\n$e',
+      ));
+    }
+  }
+
+  // ── Modo DIAGNÓSTICO IA (Servicio 3) ──────────────────────────────────────
+
+  Future<void> _onDiagnosticarAudio(
+    DiagnosticarAudioEvent event,
+    Emitter<FormularioState> emit,
+  ) async {
+    developer.log('══ [BLOC] _onDiagnosticarAudio INICIADO ══',
+        name: 'DIAGNOSE');
+    developer.log('ZIP path: ${event.zipFile.path}', name: 'DIAGNOSE');
+    developer.log('ZIP existe: ${event.zipFile.existsSync()}',
+        name: 'DIAGNOSE');
+
+    emit(const FormularioEnviando(
+      progress: 0.0,
+      status: 'Verificando conexión a Internet...',
+    ));
+
+    final hasConnection = await networkInfo.isConnected;
+    if (!hasConnection) {
+      emit(const FormularioError(
+        mensaje: 'No hay conexión a Internet. Verifica tu red.',
+      ));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.05,
+      status: 'Extrayendo audio principal del ZIP...',
+    ));
+
+    late ZipAudioFiles audios;
+    try {
+      audios = await localStorageDataSource.extraerAudiosDeZip(event.zipFile);
+      developer.log('Audio principal: ${audios.principal.path}',
+          name: 'DIAGNOSE');
+      developer.log('Audio existe: ${audios.principal.existsSync()}',
+          name: 'DIAGNOSE');
+      developer.log(
+          'Audio tamaño: ${audios.principal.existsSync() ? audios.principal.lengthSync() : 0} bytes',
+          name: 'DIAGNOSE');
+    } catch (e) {
+      developer.log('ERROR extraer audios: $e', name: 'DIAGNOSE');
+      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      return;
+    }
+
+    emit(const FormularioEnviando(
+      progress: 0.15,
+      status: 'Preparando metadatos para diagnóstico...',
+    ));
+
+    final edad = DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
+
+    final metadataJson = {
+      'metadata': {
+        'fecha_nacimiento': event.fechaNacimiento.toIso8601String(),
+        'edad': edad,
+        'fecha_grabacion': DateTime.now().toIso8601String(),
+      },
+      'ubicacion': {
+        'hospital': event.hospital,
+        'codigo_hospital': event.codigoHospital,
+        'consultorio': event.consultorio,
+        'codigo_consultorio': event.codigoConsultorio,
+      },
+      'diagnostico': {
+        'foco_auscultacion': event.focoAuscultacion,
+        'codigo_foco': event.codigoFoco,
+        'observaciones': event.observaciones ?? 'No aplica',
+        'categoria_anomalia': event.categoriaAnomalia,
+        'codigo_categoria_anomalia': event.codigoCategoriaAnomalia,
+      },
+      'paciente': {
+        'genero': event.genero,
+        'peso_kg': event.pesoCkg,
+        'altura_cm': event.alturaCm,
+        'enfermedades_base': event.enfermedadesBase,
+      },
+    };
+
+    developer.log('Metadata JSON preparado', name: 'DIAGNOSE');
+
+    emit(const FormularioEnviando(
+      progress: 0.25,
+      status: 'Enviando audio al servicio de diagnóstico IA...',
+    ));
+
+    try {
+      final resultado = await diagnoseRemoteDataSource.diagnosticar(
+        audioFile: audios.principal,
+        metadataJson: metadataJson,
+      );
+
+      developer.log('Respuesta IA recibida:', name: 'DIAGNOSE');
+      developer.log('  diagnostico: ${resultado.resultadoIA.diagnostico}',
+          name: 'DIAGNOSE');
+      developer.log(
+          '  tieneValvulopatia: ${resultado.resultadoIA.tieneValvulopatia}',
+          name: 'DIAGNOSE');
+      developer.log('  confianza: ${resultado.resultadoIA.confianza}',
+          name: 'DIAGNOSE');
+      developer.log('  paciente.edad: ${resultado.paciente.edad}',
+          name: 'DIAGNOSE');
+      developer.log('  focoAuscultacion: ${resultado.focoAuscultacion}',
+          name: 'DIAGNOSE');
+
+      // ── Guardar diagnóstico: POST /api/diagnostics ────────────────────
+      emit(const FormularioEnviando(
+        progress: 0.80,
+        status: 'Guardando diagnóstico en el servidor...',
+      ));
+
+      final usuarioId = SessionService.instance.usuario?.id;
+      final esNormal =
+          resultado.resultadoIA.diagnostico.toLowerCase() == 'normal';
+
+      if (usuarioId != null && event.focoId != null) {
+        try {
+          await diagnosticoRemoteDataSource.crearDiagnostico(
+            institucionId: event.institucionId!,
+            esNormal: esNormal,
+            edad: resultado.paciente.edad,
+            genero: resultado.paciente.genero,
+            altura: resultado.paciente.alturaCm / 100.0,
+            peso: resultado.paciente.pesoKg,
+            diagnosticoTexto: resultado.resultadoIA.diagnostico,
+            focoId: event.focoId!,
+            categoriaAnomaliaId: event.categoriaAnomaliaId,
+            usuarioCreaId: usuarioId,
+            valvulopatia: resultado.resultadoIA.tieneValvulopatia,
+            enfermedadesBaseIds: event.enfermedadesBaseIds,
+          );
+        } catch (_) {
+          // Si falla guardar el diagnóstico, aún mostramos el resultado IA
+        }
+      }
+
+      emit(DiagnosticoIARecibido(resultado: resultado));
+    } catch (e) {
+      emit(FormularioError(
+        mensaje: 'Error al obtener diagnóstico IA:\n$e',
+      ));
+    }
   }
 }

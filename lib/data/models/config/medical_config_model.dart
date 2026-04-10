@@ -4,6 +4,7 @@ import 'hospital_model.dart';
 import 'consultorio_model.dart';
 import 'foco_auscultacion_model.dart';
 import 'categoria_anomalia_model.dart';
+import 'enfermedad_model.dart';
 
 class MedicalConfigModel extends MedicalConfig {
   const MedicalConfigModel({
@@ -11,6 +12,7 @@ class MedicalConfigModel extends MedicalConfig {
     required super.consultorios,
     required super.focos,
     required super.categoriasAnomalias,
+    required super.enfermedades,
   });
 
   factory MedicalConfigModel.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,9 @@ class MedicalConfigModel extends MedicalConfig {
           .map(
               (c) => CategoriaAnomaliaModel.fromJson(c as Map<String, dynamic>))
           .toList(),
+      enfermedades: (json['enfermedades'] as List? ?? [])
+          .map((e) => EnfermedadModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -41,6 +46,8 @@ class MedicalConfigModel extends MedicalConfig {
       'categorias_anomalias': categoriasAnomalias
           .map((c) => (c as CategoriaAnomaliaModel).toJson())
           .toList(),
+      'enfermedades':
+          enfermedades.map((e) => (e as EnfermedadModel).toJson()).toList(),
     };
   }
 }

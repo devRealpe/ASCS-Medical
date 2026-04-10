@@ -32,6 +32,7 @@ class AudioMetadata extends Equatable {
   final double alturaCm;
   final String? categoriaAnomalia;
   final String? codigoCategoriaAnomalia;
+  final List<String> enfermedadesBase;
 
   const AudioMetadata({
     required this.fechaNacimiento,
@@ -54,6 +55,7 @@ class AudioMetadata extends Equatable {
     this.observaciones,
     this.categoriaAnomalia,
     this.codigoCategoriaAnomalia,
+    this.enfermedadesBase = const [],
   });
 
   @override
@@ -78,5 +80,6 @@ class AudioMetadata extends Equatable {
         alturaCm,
         categoriaAnomalia,
         codigoCategoriaAnomalia,
+        enfermedadesBase,
       ];
 }

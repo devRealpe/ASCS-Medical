@@ -14,7 +14,7 @@ import 'core/network/network_info.dart';
 
 // Data Sources
 import 'data/datasources/remote/auth_remote_datasource.dart';
-import 'data/datasources/remote/config_remote_datasource.dart';   // ← NUEVO
+import 'data/datasources/remote/config_remote_datasource.dart'; // ← NUEVO
 import 'data/datasources/local/local_storage_datasource.dart';
 import 'data/datasources/remote/aws_s3_remote_datasource.dart';
 
@@ -32,10 +32,17 @@ import 'domain/usecases/enviar_formulario_usecase.dart';
 import 'domain/usecases/generar_nombre_archivo_usecase.dart';
 
 // BLoCs
-import 'presentation/blocs/auth/auth_bloc.dart';                  // ← NUEVO
+import 'presentation/blocs/auth/auth_bloc.dart'; // ← NUEVO
 import 'presentation/blocs/config/config_bloc.dart';
+import 'presentation/blocs/diagnostico/diagnostico_bloc.dart'; // ← NUEVO
+import 'presentation/blocs/entrenamiento/entrenamiento_bloc.dart'; // ← NUEVO
 import 'presentation/blocs/formulario/formulario_bloc.dart';
 import 'presentation/blocs/upload/upload_bloc.dart';
+
+// Data Sources – Diagnósticos
+import 'data/datasources/remote/diagnostico_remote_datasource.dart'; // ← NUEVO
+import 'data/datasources/remote/sample_train_remote_datasource.dart'; // ← Servicio 2
+import 'data/datasources/remote/diagnose_remote_datasource.dart'; // ← Servicio 3
 
 final sl = GetIt.instance;
 
@@ -59,6 +66,25 @@ Future<void> init() async {
     () => AuthRemoteDataSourceImpl(httpClient: sl()),
   );
 
+  //! Diagnósticos ───────────────────────────────────────────────────────────
+
+  sl.registerFactory(
+    () => DiagnosticoBloc(dataSource: sl()),
+  );
+
+  sl.registerLazySingleton<DiagnosticoRemoteDataSource>(
+    () => DiagnosticoRemoteDataSourceImpl(httpClient: sl()),
+  );
+
+  //! Entrenamiento (Generar Diagnóstico) ────────────────────────────────────
+
+  sl.registerFactory(
+    () => EntrenamientoBloc(
+      diagnoseDataSource: sl<DiagnoseRemoteDataSource>(),
+      diagnosticoDataSource: sl<DiagnosticoRemoteDataSource>(),
+    ),
+  );
+
   //! Config ─────────────────────────────────────────────────────────────────
 
   sl.registerFactory(
@@ -75,7 +101,7 @@ Future<void> init() async {
 
   sl.registerLazySingleton<ConfigRepository>(
     () => ConfigRepositoryImpl(
-      remoteDataSource: sl(),   // ← antes: localDataSource
+      remoteDataSource: sl(), // ← antes: localDataSource
     ),
   );
 
@@ -91,14 +117,17 @@ Future<void> init() async {
       enviarFormularioUseCase: sl(),
       generarNombreArchivoUseCase: sl(),
       networkInfo: sl(),
+      localStorageDataSource: sl(),
+      sampleTrainRemoteDataSource: sl(),
+      diagnoseRemoteDataSource: sl(),
+      diagnosticoRemoteDataSource: sl(),
     ),
   );
 
   sl.registerFactory(() => UploadBloc());
 
   sl.registerLazySingleton(() => EnviarFormularioUseCase(repository: sl()));
-  sl.registerLazySingleton(
-      () => GenerarNombreArchivoUseCase(repository: sl()));
+  sl.registerLazySingleton(() => GenerarNombreArchivoUseCase(repository: sl()));
 
   sl.registerLazySingleton<FormularioRepository>(
     () => FormularioRepositoryImpl(
@@ -113,5 +142,17 @@ Future<void> init() async {
 
   sl.registerLazySingleton<LocalStorageDataSource>(
     () => LocalStorageDataSourceImpl(),
+  );
+
+  //! Servicio 2 – Muestras de entrenamiento ────────────────────────────────
+
+  sl.registerLazySingleton<SampleTrainRemoteDataSource>(
+    () => SampleTrainRemoteDataSourceImpl(httpClient: sl()),
+  );
+
+  //! Servicio 3 – Diagnóstico IA ───────────────────────────────────────────
+
+  sl.registerLazySingleton<DiagnoseRemoteDataSource>(
+    () => DiagnoseRemoteDataSourceImpl(httpClient: sl()),
   );
 }

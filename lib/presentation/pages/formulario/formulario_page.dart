@@ -1,17 +1,8 @@
-// lib/presentation/pages/formulario/formulario_page.dart
-// (Solo se muestran las secciones modificadas respecto al original)
-//
-// CAMBIOS:
-//   1. _audioFilePath → _zipFilePath  (variable de estado)
-//   2. Validación comprueba que el archivo termina en .zip
-//   3. EnviarFormularioEvent usa zipFile: en lugar de audioFile:
-//   4. _resetForm limpia _zipFilePath
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/constants/api_constants.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../injection_container.dart' as di;
 import '../../blocs/config/config_bloc.dart';
 import '../../blocs/config/config_event.dart';
@@ -26,6 +17,7 @@ import 'widgets/form_audio_picker.dart';
 import 'widgets/upload_overlay.dart';
 import '../../../../core/services/storage_preference_service.dart';
 import '../../../core/services/permission_service.dart';
+import '../../../data/models/diagnostico/diagnose_response_model.dart';
 import 'package:file_picker/file_picker.dart';
 
 class FormularioPage extends StatelessWidget {
@@ -72,6 +64,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   double? _pesoCkg;
   double? _alturaCm;
   String? _categoriaAnomalia;
+  List<String> _enfermedadesBase = [];
 
   static const bool _mostrarSelectorHospital = true;
 
@@ -83,7 +76,6 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         return BlocBuilder<ConfigBloc, ConfigState>(
           builder: (context, configState) {
             return Scaffold(
-              backgroundColor: MedicalColors.backgroundLight,
               appBar: _buildAppBar(context),
               body: Stack(
                 children: [
@@ -169,6 +161,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               onAlturaChanged: (v) => _alturaCm = v,
               onCategoriaAnomaliaChanged: (v) =>
                   setState(() => _categoriaAnomalia = v),
+              onEnfermedadesChanged: (v) =>
+                  setState(() => _enfermedadesBase = v),
             ),
             const SizedBox(height: 20),
             FormAudioPicker(
@@ -243,7 +237,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
   }
 
   Future<void> _submitForm() async {
-    // ── Validar carpeta de almacenamiento (modo local) ──
+    // ── Validar carpeta de almacenamiento (solo modo local) ──
     final storageMode = await StoragePreferenceService.getStorageMode();
     if (storageMode == StorageMode.local) {
       final customPath = await StoragePreferenceService.getLocalStoragePath();
@@ -318,31 +312,75 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     }
 
     String? codigoCat;
+    int? categoriaAnomaliaId;
     if (_categoriaAnomalia != null) {
-      codigoCat = config.getCategoriaPorNombre(_categoriaAnomalia!)?.codigo;
+      final catEntity = config.getCategoriaPorNombre(_categoriaAnomalia!);
+      codigoCat = catEntity?.codigo;
+      categoriaAnomaliaId = catEntity?.id;
     }
+
+    // Obtener IDs numéricos de enfermedades base
+    final enfermedadesBaseIds = _enfermedadesBase
+        .map((nombre) => config.getEnfermedadPorNombre(nombre)?.id)
+        .whereType<int>()
+        .toList();
 
     if (!mounted) return;
 
-    context.read<FormularioBloc>().add(
-          EnviarFormularioEvent(
-            fechaNacimiento: _selectedDate!,
-            hospital: _hospital!,
-            codigoHospital: hospitalEntity.codigo,
-            consultorio: _consultorio!,
-            codigoConsultorio: consultorioEntity.codigo,
-            estado: _estado!,
-            focoAuscultacion: _focoAuscultacion!,
-            codigoFoco: focoEntity.codigo,
-            observaciones: _observaciones,
-            zipFile: File(_zipFilePath!), // ← ZIP en lugar de WAV
-            genero: _genero!,
-            pesoCkg: _pesoCkg!,
-            alturaCm: _alturaCm!,
-            categoriaAnomalia: _categoriaAnomalia,
-            codigoCategoriaAnomalia: codigoCat,
-          ),
-        );
+    // ── Despachar evento según modo de almacenamiento ──
+    if (storageMode == StorageMode.training) {
+      // Modo entrenamiento: enviar al Servicio 2
+
+      context.read<FormularioBloc>().add(
+            EnviarFormularioEvent(
+              fechaNacimiento: _selectedDate!,
+              hospital: _hospital!,
+              codigoHospital: hospitalEntity.codigo,
+              consultorio: _consultorio!,
+              codigoConsultorio: consultorioEntity.codigo,
+              estado: _estado!,
+              focoAuscultacion: _focoAuscultacion!,
+              codigoFoco: focoEntity.codigo,
+              observaciones: _observaciones,
+              zipFile: File(_zipFilePath!),
+              genero: _genero!,
+              pesoCkg: _pesoCkg!,
+              alturaCm: _alturaCm!,
+              categoriaAnomalia: _categoriaAnomalia,
+              codigoCategoriaAnomalia: codigoCat,
+              enfermedadesBase: _enfermedadesBase,
+              focoId: focoEntity.id,
+              categoriaAnomaliaId: categoriaAnomaliaId,
+              enfermedadesBaseIds: enfermedadesBaseIds,
+            ),
+          );
+    } else {
+      // Modo local/nube: enviar audio a IA (Servicio 3) → guardar diagnóstico
+
+      context.read<FormularioBloc>().add(
+            DiagnosticarAudioEvent(
+              fechaNacimiento: _selectedDate!,
+              hospital: _hospital!,
+              codigoHospital: hospitalEntity.codigo,
+              consultorio: _consultorio!,
+              codigoConsultorio: consultorioEntity.codigo,
+              focoAuscultacion: _focoAuscultacion!,
+              codigoFoco: focoEntity.codigo,
+              observaciones: _observaciones,
+              zipFile: File(_zipFilePath!),
+              genero: _genero!,
+              pesoCkg: _pesoCkg!,
+              alturaCm: _alturaCm!,
+              categoriaAnomalia: _categoriaAnomalia,
+              codigoCategoriaAnomalia: codigoCat,
+              enfermedadesBase: _enfermedadesBase,
+              institucionId: hospitalEntity.id,
+              focoId: focoEntity.id,
+              categoriaAnomaliaId: categoriaAnomaliaId,
+              enfermedadesBaseIds: enfermedadesBaseIds,
+            ),
+          );
+    }
   }
 
   void _handleFormularioStateChanges(
@@ -352,6 +390,9 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     if (state is FormularioEnviadoExitosamente) {
       _showSuccess(state.mensaje);
       _resetForm();
+      context.read<FormularioBloc>().add(ResetFormularioEvent());
+    } else if (state is DiagnosticoIARecibido) {
+      _showDiagnosticoResultDialog(state.resultado);
       context.read<FormularioBloc>().add(ResetFormularioEvent());
     } else if (state is FormularioError) {
       _showError(state.mensaje);
@@ -375,6 +416,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       _pesoCkg = null;
       _alturaCm = null;
       _categoriaAnomalia = null;
+      _enfermedadesBase = [];
     });
   }
 
@@ -409,6 +451,128 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
         ),
         backgroundColor: MedicalColors.successGreen,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showDiagnosticoResultDialog(DiagnoseResponseModel resultado) {
+    if (!mounted) return;
+    final ia = resultado.resultadoIA;
+    final colorDiag = ia.tieneValvulopatia
+        ? MedicalColors.errorRed
+        : MedicalColors.successGreen;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.psychology, color: colorDiag),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Resultado Diagnóstico IA')),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Diagnóstico principal
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorDiag.withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colorDiag.withAlpha(80)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      ia.tieneValvulopatia
+                          ? Icons.warning_amber_rounded
+                          : Icons.check_circle_outline,
+                      color: colorDiag,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ia.diagnostico,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colorDiag,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Probabilidades
+              _diagRow('Prob. anomalía',
+                  '${(ia.probabilidadAnomalia * 100).toStringAsFixed(1)}%'),
+              _diagRow('Prob. normal',
+                  '${(ia.probabilidadNormal * 100).toStringAsFixed(1)}%'),
+              _diagRow('Confianza', ia.confianza),
+              const Divider(height: 24),
+
+              // Info adicional
+              _diagRow('Foco', resultado.focoAuscultacion),
+              _diagRow('Archivo', resultado.archivoAnalizado),
+              if (resultado.recomendacion.isNotEmpty)
+                _diagRow('Recomendación', resultado.recomendacion),
+              if (ia.modeloEntrenadoCon > 0)
+                _diagRow('Modelo', '${ia.modeloEntrenadoCon} muestras'),
+
+              // Paciente info
+              const Divider(height: 24),
+              const Text('Paciente:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              _diagRow('Edad', '${resultado.paciente.edad} años'),
+              _diagRow('Género', resultado.paciente.genero),
+              _diagRow('Peso', '${resultado.paciente.pesoKg} kg'),
+              _diagRow('Altura', '${resultado.paciente.alturaCm} cm'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _resetForm();
+            },
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _diagRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
       ),
     );
   }

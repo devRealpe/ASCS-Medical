@@ -1,6 +1,7 @@
 // lib/presentation/blocs/formulario/formulario_state.dart
 
 import 'package:equatable/equatable.dart';
+import 'package:app_ascs/data/models/diagnostico/diagnose_response_model.dart';
 
 abstract class FormularioState extends Equatable {
   const FormularioState();
@@ -46,4 +47,14 @@ class FormularioError extends FormularioState {
 
   @override
   List<Object?> get props => [mensaje];
+}
+
+/// Estado cuando el diagnóstico IA fue recibido exitosamente
+class DiagnosticoIARecibido extends FormularioState {
+  final DiagnoseResponseModel resultado;
+
+  const DiagnosticoIARecibido({required this.resultado});
+
+  @override
+  List<Object?> get props => [resultado];
 }

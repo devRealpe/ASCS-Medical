@@ -25,6 +25,7 @@ class FormFields extends StatefulWidget {
   final Function(double?) onPesoChanged;
   final Function(double?) onAlturaChanged;
   final Function(String?) onCategoriaAnomaliaChanged;
+  final Function(List<String>) onEnfermedadesChanged;
 
   const FormFields({
     super.key,
@@ -46,6 +47,7 @@ class FormFields extends StatefulWidget {
     required this.onPesoChanged,
     required this.onAlturaChanged,
     required this.onCategoriaAnomaliaChanged,
+    required this.onEnfermedadesChanged,
   });
 
   @override
@@ -59,6 +61,7 @@ class FormFieldsState extends State<FormFields> {
 
   String? _generoSeleccionado;
   String? _categoriaAnomaliaSeleccionada;
+  List<String> _enfermedadesSeleccionadas = [];
 
   @override
   void initState() {
@@ -88,6 +91,7 @@ class FormFieldsState extends State<FormFields> {
     setState(() {
       _generoSeleccionado = null;
       _categoriaAnomaliaSeleccionada = null;
+      _enfermedadesSeleccionadas = [];
     });
   }
 
@@ -178,6 +182,10 @@ class FormFieldsState extends State<FormFields> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+
+            // Enfermedades base
+            _buildEnfermedadesSelector(),
           ],
         ),
         const SizedBox(height: 20),
@@ -218,13 +226,11 @@ class FormFieldsState extends State<FormFields> {
                 Container(
                   margin: const EdgeInsets.only(top: 8),
                   decoration: BoxDecoration(
-                    color: MedicalColors.primaryBlue
-                        .withAlpha((0.1 * 255).toInt()),
+                    color: context.primary.withAlpha(25),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.info_outline,
-                        color: MedicalColors.primaryBlue),
+                    icon: Icon(Icons.info_outline, color: context.primary),
                     tooltip: 'Ver focos de auscultación',
                     onPressed: () => _showFocosDialog(context),
                   ),
@@ -255,9 +261,6 @@ class FormFieldsState extends State<FormFields> {
     required List<Widget> children,
   }) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: MedicalColors.cardWhite,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -272,18 +275,19 @@ class FormFieldsState extends State<FormFields> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
+    final primary = context.primary;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            MedicalColors.primaryBlue.withAlpha((0.08 * 255).toInt()),
-            MedicalColors.primaryBlue.withAlpha((0.03 * 255).toInt()),
+            primary.withAlpha(20),
+            primary.withAlpha(8),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: const Border(
-          left: BorderSide(color: MedicalColors.primaryBlue, width: 4),
+        border: Border(
+          left: BorderSide(color: primary, width: 4),
         ),
       ),
       child: Row(
@@ -291,19 +295,16 @@ class FormFieldsState extends State<FormFields> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: MedicalColors.primaryBlue.withAlpha((0.15 * 255).toInt()),
+              color: primary.withAlpha(38),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: MedicalColors.primaryBlue, size: 20),
+            child: Icon(icon, color: primary, size: 20),
           ),
           const SizedBox(width: 12),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: MedicalColors.textPrimary,
-            ),
+            style:
+                Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 18),
           ),
         ],
       ),
@@ -318,57 +319,31 @@ class FormFieldsState extends State<FormFields> {
     required Function(String?) onChanged,
     bool required = true,
   }) {
+    final primary = context.primary;
     return DropdownButtonFormField<String>(
       initialValue: value,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: MedicalColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+            color: primary.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: MedicalColors.primaryBlue, size: 20),
+          child: Icon(icon, color: primary, size: 20),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: MedicalColors.primaryBlue, width: 2.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
       ),
       items: items
           .map((item) => DropdownMenuItem(
                 value: item,
-                child: Text(
-                  item,
-                  style: const TextStyle(
-                    color: MedicalColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text(item),
               ))
           .toList(),
       onChanged: onChanged,
       validator:
           required ? (v) => v == null ? 'Selecciona una opción' : null : null,
-      icon: const Icon(Icons.keyboard_arrow_down,
-          color: MedicalColors.primaryBlue),
+      icon: Icon(Icons.keyboard_arrow_down, color: primary),
       borderRadius: BorderRadius.circular(14),
     );
   }
@@ -379,47 +354,21 @@ class FormFieldsState extends State<FormFields> {
       initialValue: _categoriaAnomaliaSeleccionada,
       decoration: InputDecoration(
         labelText: 'Categoría de anomalía',
-        labelStyle: const TextStyle(
-          color: MedicalColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: MedicalColors.warningOrange.withAlpha((0.1 * 255).toInt()),
+            color: MedicalColors.warningOrange.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.warning_amber_rounded,
               color: MedicalColors.warningOrange, size: 20),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: MedicalColors.warningOrange, width: 2.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
       ),
       items: widget.config.categoriasAnomalias
           .map((cat) => DropdownMenuItem(
                 value: cat.nombre,
-                child: Text(
-                  cat.nombre,
-                  style: const TextStyle(
-                    color: MedicalColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text(cat.nombre),
               ))
           .toList(),
       onChanged: (value) {
@@ -448,20 +397,18 @@ class FormFieldsState extends State<FormFields> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: MedicalColors.primaryBlue
-                        .withAlpha((0.1 * 255).toInt()),
+                    color: context.primary.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.wc,
-                      color: MedicalColors.primaryBlue, size: 20),
+                  child: Icon(Icons.wc, color: context.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Género',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: MedicalColors.textSecondary,
+                    color: context.onSurfaceSecondary,
                   ),
                 ),
                 const Text(
@@ -529,11 +476,9 @@ class FormFieldsState extends State<FormFields> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: selected
-                ? color.withAlpha((0.12 * 255).toInt())
-                : Colors.grey[50],
+            color: selected ? color.withAlpha(30) : context.inputFill,
             border: Border.all(
-              color: selected ? color : Colors.grey.shade300,
+              color: selected ? color : context.divider,
               width: selected ? 2.5 : 1.5,
             ),
             borderRadius: BorderRadius.circular(14),
@@ -541,14 +486,13 @@ class FormFieldsState extends State<FormFields> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  color: selected ? color : Colors.grey.shade500, size: 22),
+              Icon(icon, color: selected ? color : context.hint, size: 22),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                  color: selected ? color : Colors.grey.shade600,
+                  color: selected ? color : context.onSurfaceSecondary,
                   fontSize: 15,
                 ),
               ),
@@ -567,6 +511,7 @@ class FormFieldsState extends State<FormFields> {
     required Function(String?) onChanged,
     required String? Function(String?) validator,
   }) {
+    final primary = context.primary;
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -575,92 +520,47 @@ class FormFieldsState extends State<FormFields> {
       ],
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: MedicalColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
         hintText: hint,
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+            color: primary.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: MedicalColors.primaryBlue, size: 20),
+          child: Icon(icon, color: primary, size: 20),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: MedicalColors.primaryBlue, width: 2.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
       ),
       onChanged: onChanged,
       validator: validator,
-      style: const TextStyle(
-        color: MedicalColors.textPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ),
     );
   }
 
   Widget _buildDatePicker(BuildContext context) {
+    final primary = this.context.primary;
     return TextFormField(
       decoration: InputDecoration(
         labelText: 'Fecha de nacimiento',
-        labelStyle: const TextStyle(
-          color: MedicalColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+            color: primary.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.calendar_today,
-              color: MedicalColors.primaryBlue, size: 20),
+          child: Icon(Icons.calendar_today, color: primary, size: 20),
         ),
         suffixIcon: widget.selectedDate != null
             ? Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color:
-                      MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+                  color: primary.withAlpha(25),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check,
-                    color: MedicalColors.primaryBlue, size: 16),
+                child: Icon(Icons.check, color: primary, size: 16),
               )
             : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: MedicalColors.primaryBlue, width: 2.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
       ),
       readOnly: true,
       onTap: () => _selectDate(context),
@@ -673,11 +573,6 @@ class FormFieldsState extends State<FormFields> {
       ),
       validator: (v) =>
           widget.selectedDate == null ? 'Selecciona una fecha' : null,
-      style: const TextStyle(
-        color: MedicalColors.textPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ),
     );
   }
 
@@ -687,19 +582,6 @@ class FormFieldsState extends State<FormFields> {
       initialDate: widget.selectedDate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: MedicalColors.primaryBlue,
-              onPrimary: Colors.white,
-              surface: MedicalColors.cardWhite,
-              onSurface: MedicalColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (pickedDate != null) {
       widget.onDateChanged(pickedDate);
@@ -707,45 +589,104 @@ class FormFieldsState extends State<FormFields> {
   }
 
   Widget _buildObservacionesField() {
+    final primary = context.primary;
     return TextFormField(
       controller: _observacionesController,
       decoration: InputDecoration(
         labelText: 'Diagnóstico (Opcional)',
-        labelStyle: const TextStyle(
-          color: MedicalColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: MedicalColors.primaryBlue.withAlpha((0.1 * 255).toInt()),
+            color: primary.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.notes,
-              color: MedicalColors.primaryBlue, size: 20),
+          child: Icon(Icons.notes, color: primary, size: 20),
         ),
         hintText: 'Escribe observaciones o diagnóstico aquí...',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: MedicalColors.primaryBlue, width: 2.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
         alignLabelWithHint: true,
       ),
       maxLines: 4,
       minLines: 3,
       textCapitalization: TextCapitalization.sentences,
+    );
+  }
+
+  /// Selector de enfermedades base (multi-select con chips)
+  Widget _buildEnfermedadesSelector() {
+    final primary = context.primary;
+    final enfermedadesDisponibles =
+        widget.config.enfermedades.map((e) => e.nombre).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primary.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.coronavirus_outlined, color: primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Enfermedades base',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: context.onSurfaceSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (enfermedadesDisponibles.isEmpty)
+          Text(
+            'No hay enfermedades disponibles',
+            style: TextStyle(
+              color: context.hint,
+              fontStyle: FontStyle.italic,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: enfermedadesDisponibles.map((nombre) {
+              final selected = _enfermedadesSeleccionadas.contains(nombre);
+              return FilterChip(
+                label: Text(nombre),
+                selected: selected,
+                onSelected: (isSelected) {
+                  setState(() {
+                    if (isSelected) {
+                      _enfermedadesSeleccionadas.add(nombre);
+                    } else {
+                      _enfermedadesSeleccionadas.remove(nombre);
+                    }
+                  });
+                  widget.onEnfermedadesChanged(
+                      List.from(_enfermedadesSeleccionadas));
+                },
+                selectedColor: primary.withAlpha(40),
+                checkmarkColor: primary,
+                labelStyle: TextStyle(
+                  color: selected ? primary : context.onSurfaceSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: selected ? primary : context.divider,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+      ],
     );
   }
 
@@ -774,12 +715,11 @@ class FormFieldsState extends State<FormFields> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: MedicalColors.primaryBlue
-                          .withAlpha((0.1 * 255).toInt()),
+                      color: context.primary.withAlpha(25),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.hearing,
-                        color: MedicalColors.primaryBlue, size: 24),
+                    child:
+                        Icon(Icons.hearing, color: context.primary, size: 24),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -805,7 +745,6 @@ class FormFieldsState extends State<FormFields> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: MedicalColors.primaryBlue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: const Text('Cerrar'),

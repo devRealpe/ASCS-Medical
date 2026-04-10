@@ -3,18 +3,21 @@ import 'hospital.dart';
 import 'consultorio.dart';
 import 'foco_auscultacion.dart';
 import 'categoria_anomalia.dart';
+import 'enfermedad.dart';
 
 class MedicalConfig extends Equatable {
   final List<Hospital> hospitales;
   final List<Consultorio> consultorios;
   final List<FocoAuscultacion> focos;
   final List<CategoriaAnomalia> categoriasAnomalias;
+  final List<Enfermedad> enfermedades;
 
   const MedicalConfig({
     required this.hospitales,
     required this.consultorios,
     required this.focos,
     required this.categoriasAnomalias,
+    required this.enfermedades,
   });
 
   /// Obtiene los consultorios de un hospital específico
@@ -60,7 +63,16 @@ class MedicalConfig extends Equatable {
     }
   }
 
+  /// Obtiene una enfermedad por su nombre
+  Enfermedad? getEnfermedadPorNombre(String nombre) {
+    try {
+      return enfermedades.firstWhere((e) => e.nombre == nombre);
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   List<Object?> get props =>
-      [hospitales, consultorios, focos, categoriasAnomalias];
+      [hospitales, consultorios, focos, categoriasAnomalias, enfermedades];
 }

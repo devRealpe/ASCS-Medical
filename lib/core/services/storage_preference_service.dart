@@ -3,7 +3,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Modos de almacenamiento disponibles
-enum StorageMode { local, cloud }
+enum StorageMode { local, cloud, training }
 
 /// Servicio para gestionar la preferencia de almacenamiento
 class StoragePreferenceService {
@@ -19,6 +19,9 @@ class StoragePreferenceService {
     final stored = prefs.getString(_storageModeKey);
     if (stored == StorageMode.cloud.name) {
       return StorageMode.cloud;
+    }
+    if (stored == StorageMode.training.name) {
+      return StorageMode.training;
     }
     return StorageMode.local;
   }
@@ -65,6 +68,8 @@ class StoragePreferenceService {
         return 'Almacenamiento Local';
       case StorageMode.cloud:
         return 'Nube (AWS S3)';
+      case StorageMode.training:
+        return 'Entrenamiento (API)';
     }
   }
 }

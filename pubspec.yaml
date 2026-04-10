@@ -78,7 +78,6 @@ flutter:
 
   assets:
     - assets/imagenes/foco_auscultacion.jpg
-    - assets/config/medical_config.json
 
 flutter_icons:
   android: true

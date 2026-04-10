@@ -24,4 +24,19 @@ class RegistrarUsuarioEvent extends AuthEvent {
   List<Object?> get props => [nombreUsuario, email, contrasena];
 }
 
+class LoginUsuarioEvent extends AuthEvent {
+  final String nombreUsuario;
+  final String contrasena;
+
+  const LoginUsuarioEvent({
+    required this.nombreUsuario,
+    required this.contrasena,
+  });
+
+  @override
+  List<Object?> get props => [nombreUsuario, contrasena];
+}
+
 class ResetAuthEvent extends AuthEvent {}
+
+class LogoutEvent extends AuthEvent {}

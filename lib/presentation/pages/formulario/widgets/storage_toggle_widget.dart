@@ -58,9 +58,28 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
     }
 
     final isLocal = _currentMode == StorageMode.local;
+    final isTraining = _currentMode == StorageMode.training;
+
+    final IconData modeIcon;
+    final String modeTooltip;
+    final Color dotColor;
+
+    if (isLocal) {
+      modeIcon = Icons.storage_rounded;
+      modeTooltip = 'Almacenamiento: Local';
+      dotColor = const Color(0xFF66BB6A);
+    } else if (isTraining) {
+      modeIcon = Icons.model_training;
+      modeTooltip = 'Almacenamiento: Entrenamiento';
+      dotColor = const Color(0xFF6C63FF);
+    } else {
+      modeIcon = Icons.cloud_done_rounded;
+      modeTooltip = 'Almacenamiento: Nube';
+      dotColor = const Color(0xFF42A5F5);
+    }
 
     return Tooltip(
-      message: isLocal ? 'Almacenamiento: Local' : 'Almacenamiento: Nube',
+      message: modeTooltip,
       child: Container(
         width: 36,
         height: 36,
@@ -75,7 +94,7 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
             alignment: Alignment.center,
             children: [
               Icon(
-                isLocal ? Icons.storage_rounded : Icons.cloud_done_rounded,
+                modeIcon,
                 color: Colors.white,
                 size: 20,
               ),
@@ -86,9 +105,7 @@ class _StorageToggleWidgetState extends State<StorageToggleWidget> {
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: isLocal
-                        ? const Color(0xFF66BB6A)
-                        : const Color(0xFF42A5F5),
+                    color: dotColor,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1),
                   ),
@@ -247,8 +264,8 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
     await StoragePreferenceService.clearLocalStoragePath();
     if (mounted) {
       setState(() => _currentCustomPath = null);
-      _showSnack('Carpeta restablecida a la ubicación por defecto',
-          MedicalColors.primaryBlue);
+      _showSnack(
+          'Carpeta restablecida a la ubicación por defecto', context.primary);
     }
   }
 
@@ -268,10 +285,11 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
     final showFolderSection = widget.currentMode == StorageMode.local &&
         _selectedMode == StorageMode.local;
 
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(24)),
+          color: theme.cardColor, borderRadius: BorderRadius.circular(24)),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -290,7 +308,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: context.divider,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -303,27 +321,21 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: MedicalColors.primaryBlue
-                          .withAlpha((0.1 * 255).toInt()),
+                      color: context.primary.withAlpha(25),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.settings_rounded,
-                        color: MedicalColors.primaryBlue, size: 22),
+                    child: Icon(Icons.settings_rounded,
+                        color: context.primary, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Almacenamiento',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: MedicalColors.textPrimary)),
+                            style: theme.textTheme.titleMedium),
                         Text('Requiere contraseña para cambiar',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: MedicalColors.textSecondary)),
+                            style: theme.textTheme.bodySmall),
                       ],
                     ),
                   ),
@@ -345,7 +357,16 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                 icon: Icons.cloud_upload_rounded,
                 title: 'Nube (AWS S3)',
                 subtitle: 'Envía al repositorio remoto\n(Requiere Internet)',
-                color: MedicalColors.primaryBlue,
+                color: context.primary,
+              ),
+              const SizedBox(height: 10),
+              _buildStorageOption(
+                mode: StorageMode.training,
+                icon: Icons.model_training,
+                title: 'Entrenamiento (API)',
+                subtitle:
+                    'Envía muestras al servidor de\nentrenamiento (Requiere Internet)',
+                color: const Color(0xFF6C63FF),
               ),
 
               // ── Selector de carpeta ──────────────────────────────────────
@@ -414,12 +435,9 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                   children: [
                     Text('Carpeta de almacenamiento',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: MedicalColors.textPrimary)),
+                            fontWeight: FontWeight.bold, fontSize: 13)),
                     Text('Elige dónde se guardarán audios y JSON',
-                        style: TextStyle(
-                            fontSize: 11, color: MedicalColors.textSecondary)),
+                        style: TextStyle(fontSize: 11)),
                   ],
                 ),
               ),
@@ -438,9 +456,9 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.inputFill,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: context.divider),
               ),
               child: Row(
                 children: [
@@ -449,7 +467,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                         ? Icons.folder_rounded
                         : Icons.folder_special_rounded,
                     size: 17,
-                    color: hasCustomPath ? green : Colors.grey.shade500,
+                    color: hasCustomPath ? green : context.hint,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -459,9 +477,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                           : 'Por defecto (almacenamiento interno de la app)',
                       style: TextStyle(
                         fontSize: 12,
-                        color: hasCustomPath
-                            ? MedicalColors.textPrimary
-                            : Colors.grey.shade600,
+                        color: hasCustomPath ? context.onSurface : context.hint,
                         fontStyle:
                             hasCustomPath ? FontStyle.normal : FontStyle.italic,
                       ),
@@ -502,8 +518,8 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                     label: const Text('Restablecer',
                         style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey.shade600,
-                      side: BorderSide(color: Colors.grey.shade400),
+                      foregroundColor: context.hint,
+                      side: BorderSide(color: context.divider),
                       padding: const EdgeInsets.symmetric(vertical: 9),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -520,19 +536,19 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: context.primary.withAlpha(15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 13, color: Colors.blue.shade700),
+                Icon(Icons.info_outline, size: 13, color: context.primary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Se crearán "repositorio/audios" y "repositorio/audios-json" '
                     'dentro de la carpeta elegida.',
-                    style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                    style: TextStyle(fontSize: 11, color: context.primary),
                   ),
                 ),
               ],
@@ -565,12 +581,10 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? color.withAlpha((0.08 * 255).toInt())
-              : Colors.grey.shade50,
+          color: isSelected ? color.withAlpha(20) : context.inputFill,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade200,
+            color: isSelected ? color : context.divider,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -579,13 +593,11 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? color.withAlpha((0.15 * 255).toInt())
-                    : Colors.grey.shade200,
+                color: isSelected ? color.withAlpha(38) : context.divider,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon,
-                  color: isSelected ? color : Colors.grey.shade500, size: 22),
+                  color: isSelected ? color : context.hint, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -599,9 +611,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                       Text(title,
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? color
-                                  : MedicalColors.textPrimary,
+                              color: isSelected ? color : context.onSurface,
                               fontSize: 14)),
                       if (isCurrent)
                         Container(
@@ -621,8 +631,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
                   ),
                   const SizedBox(height: 3),
                   Text(subtitle,
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      style: TextStyle(fontSize: 11, color: context.hint)),
                 ],
               ),
             ),
@@ -634,7 +643,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? color : Colors.grey.shade400,
+                  color: isSelected ? color : context.divider,
                   width: isSelected ? 2 : 1.5,
                 ),
                 color: isSelected
@@ -690,12 +699,12 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
             obscureText: !_showPassword,
             decoration: InputDecoration(
               hintText: 'Contraseña de configuración',
-              prefixIcon: const Icon(Icons.password,
-                  color: MedicalColors.primaryBlue, size: 20),
+              prefixIcon:
+                  Icon(Icons.password, color: context.primary, size: 20),
               suffixIcon: IconButton(
                 icon: Icon(
                     _showPassword ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey,
+                    color: context.hint,
                     size: 20),
                 onPressed: () => setState(() => _showPassword = !_showPassword),
               ),
@@ -716,7 +725,7 @@ class _StorageOptionsSheetState extends State<_StorageOptionsSheet> {
             child: ElevatedButton(
               onPressed: _isChanging ? null : _confirmarCambio,
               style: ElevatedButton.styleFrom(
-                backgroundColor: MedicalColors.primaryBlue,
+                backgroundColor: context.primary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),

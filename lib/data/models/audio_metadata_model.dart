@@ -31,6 +31,7 @@ class AudioMetadataModel extends AudioMetadata {
     super.observaciones,
     super.categoriaAnomalia,
     super.codigoCategoriaAnomalia,
+    super.enfermedadesBase,
   });
 
   // ── Deserialización ───────────────────────────────────────────────────────
@@ -62,6 +63,10 @@ class AudioMetadataModel extends AudioMetadata {
       categoriaAnomalia: diagnostico['categoria_anomalia'] as String?,
       codigoCategoriaAnomalia:
           diagnostico['codigo_categoria_anomalia'] as String?,
+      enfermedadesBase: (paciente['enfermedades_base'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       genero: paciente['genero'] as String,
       pesoCkg: (paciente['peso_kg'] as num).toDouble(),
       alturaCm: (paciente['altura_cm'] as num).toDouble(),
@@ -108,6 +113,7 @@ class AudioMetadataModel extends AudioMetadata {
         'genero': genero,
         'peso_kg': pesoCkg,
         'altura_cm': alturaCm,
+        'enfermedades_base': enfermedadesBase,
       },
     };
   }
@@ -135,6 +141,7 @@ class AudioMetadataModel extends AudioMetadata {
     double? alturaCm,
     String? categoriaAnomalia,
     String? codigoCategoriaAnomalia,
+    List<String>? enfermedadesBase,
   }) {
     return AudioMetadataModel(
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
@@ -158,6 +165,7 @@ class AudioMetadataModel extends AudioMetadata {
       categoriaAnomalia: categoriaAnomalia ?? this.categoriaAnomalia,
       codigoCategoriaAnomalia:
           codigoCategoriaAnomalia ?? this.codigoCategoriaAnomalia,
+      enfermedadesBase: enfermedadesBase ?? this.enfermedadesBase,
     );
   }
 }

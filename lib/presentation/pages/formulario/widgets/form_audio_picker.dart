@@ -59,8 +59,6 @@ class FormAudioPickerState extends State<FormAudioPicker> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -77,18 +75,19 @@ class FormAudioPickerState extends State<FormAudioPicker> {
   }
 
   Widget _buildSectionHeader() {
+    final primary = context.primary;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            MedicalColors.primaryBlue.withAlpha((0.08 * 255).toInt()),
-            MedicalColors.primaryBlue.withAlpha((0.03 * 255).toInt()),
+            primary.withAlpha(20),
+            primary.withAlpha(8),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: const Border(
-          left: BorderSide(color: MedicalColors.primaryBlue, width: 4),
+        border: Border(
+          left: BorderSide(color: primary, width: 4),
         ),
       ),
       child: Row(
@@ -96,35 +95,27 @@ class FormAudioPickerState extends State<FormAudioPicker> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: MedicalColors.primaryBlue.withAlpha((0.15 * 255).toInt()),
+              color: primary.withAlpha(38),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.folder_zip_outlined,
-              color: MedicalColors.primaryBlue,
-              size: 20,
-            ),
+            child: Icon(Icons.folder_zip_outlined, color: primary, size: 20),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Archivos de Audio',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: MedicalColors.textPrimary,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontSize: 18),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'ZIP con 4 sonidos cardíacos',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: MedicalColors.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
@@ -146,18 +137,15 @@ class FormAudioPickerState extends State<FormAudioPicker> {
             gradient: _selectedFileName != null
                 ? LinearGradient(
                     colors: [
-                      MedicalColors.successGreen.withAlpha((0.1 * 255).toInt()),
-                      MedicalColors.successGreen
-                          .withAlpha((0.05 * 255).toInt()),
+                      MedicalColors.successGreen.withAlpha(25),
+                      MedicalColors.successGreen.withAlpha(12),
                     ],
                   )
                 : null,
             border: Border.all(
               color: _selectedFileName != null
                   ? MedicalColors.successGreen
-                  : (_isHovering
-                      ? MedicalColors.primaryBlue
-                      : Colors.grey.shade300),
+                  : (_isHovering ? context.primary : context.divider),
               width: _isHovering || _selectedFileName != null ? 2 : 1.5,
             ),
             borderRadius: BorderRadius.circular(16),
@@ -172,7 +160,7 @@ class FormAudioPickerState extends State<FormAudioPicker> {
                 size: 48,
                 color: _selectedFileName != null
                     ? MedicalColors.successGreen
-                    : MedicalColors.primaryBlue,
+                    : context.primary,
               ),
               const SizedBox(height: 20),
               Text(
@@ -184,7 +172,7 @@ class FormAudioPickerState extends State<FormAudioPicker> {
                   fontWeight: FontWeight.bold,
                   color: _selectedFileName != null
                       ? MedicalColors.successGreen
-                      : MedicalColors.primaryBlue,
+                      : context.primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -192,24 +180,23 @@ class FormAudioPickerState extends State<FormAudioPicker> {
                 _selectedFileName != null
                     ? 'Toca para cambiar el archivo'
                     : 'Toca aquí para elegir un archivo .zip',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 14, color: context.hint),
               ),
               if (_selectedFileName != null) ...[
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.inputFill,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: context.divider),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: MedicalColors.successGreen
-                              .withAlpha((0.1 * 255).toInt()),
+                          color: MedicalColors.successGreen.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
@@ -235,10 +222,7 @@ class FormAudioPickerState extends State<FormAudioPicker> {
                             const SizedBox(height: 4),
                             Text(
                               _getFileSize(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ),
@@ -266,25 +250,23 @@ class FormAudioPickerState extends State<FormAudioPicker> {
       (Icons.monitor_heart, 'ECG_2', 'ECG Canal 2'),
     ];
 
+    final primary = context.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: MedicalColors.primaryBlue.withAlpha((0.05 * 255).toInt()),
+        color: primary.withAlpha(12),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: MedicalColors.primaryBlue.withAlpha((0.2 * 255).toInt()),
-        ),
+        border: Border.all(color: primary.withAlpha(50)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Carpetas de destino:',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: MedicalColors.textSecondary,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
           ),
           const SizedBox(height: 6),
           Row(
@@ -292,14 +274,14 @@ class FormAudioPickerState extends State<FormAudioPicker> {
             children: types.map((t) {
               return Column(
                 children: [
-                  Icon(t.$1, size: 16, color: MedicalColors.primaryBlue),
+                  Icon(t.$1, size: 16, color: primary),
                   const SizedBox(height: 3),
                   Text(
                     t.$2,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: MedicalColors.primaryBlue,
+                      color: primary,
                     ),
                   ),
                 ],
@@ -319,14 +301,14 @@ class FormAudioPickerState extends State<FormAudioPicker> {
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
+              Icon(Icons.info_outline, size: 16, color: context.hint),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'El ZIP debe contener exactamente 4 archivos WAV',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: context.hint,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -340,7 +322,7 @@ class FormAudioPickerState extends State<FormAudioPicker> {
               'Sin sufijo → Audios/  •  _ECG → ECG/  •  _ECG_1 → ECG_1/  •  _ECG_2 → ECG_2/',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade500,
+                color: context.hint,
               ),
             ),
           ),

@@ -15,6 +15,13 @@ abstract class AuthRemoteDataSource {
     required String email,
     required String contrasena,
   });
+
+  /// Inicia sesión con nombre de usuario y contraseña.
+  /// Devuelve un [UsuarioModel] con token incluido.
+  Future<UsuarioModel> login({
+    required String nombreUsuario,
+    required String contrasena,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -58,7 +65,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
 
     // Errores conocidos
-    final message = body is Map ? (body['message'] ?? body['error'] ?? 'Error desconocido').toString() : 'Error del servidor';
+    final message = body is Map
+        ? (body['message'] ?? body['error'] ?? 'Error desconocido').toString()
+        : 'Error del servidor';
 
     if (response.statusCode == 409 || message.toLowerCase().contains('exist')) {
       throw ServerException('El correo o usuario ya está registrado');
@@ -67,7 +76,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw ServerException('Datos inválidos: $message');
     }
 
-    throw ServerException('Error del servidor (${response.statusCode}): $message');
+    throw ServerException(
+        'Error del servidor (${response.statusCode}): $message');
   }
 
   dynamic _decodeBody(http.Response response) {
@@ -76,5 +86,49 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (_) {
       return response.body;
     }
+  }
+
+  @override
+  Future<UsuarioModel> login({
+    required String nombreUsuario,
+    required String contrasena,
+  }) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}');
+
+    late http.Response response;
+    try {
+      response = await httpClient
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'nombreUsuario': nombreUsuario,
+              'contrasena': contrasena,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw NetworkException('No se pudo conectar con el servidor: $e');
+    }
+
+    final body = _decodeBody(response);
+
+    if (response.statusCode == 200) {
+      return UsuarioModel.fromLoginJson(body as Map<String, dynamic>);
+    }
+
+    final message = body is Map
+        ? (body['message'] ?? body['error'] ?? 'Error desconocido').toString()
+        : 'Error del servidor';
+
+    if (response.statusCode == 401) {
+      throw ServerException('Usuario o contraseña incorrectos');
+    }
+    if (response.statusCode == 404) {
+      throw ServerException('Usuario no encontrado');
+    }
+
+    throw ServerException(
+        'Error del servidor (${response.statusCode}): $message');
   }
 }

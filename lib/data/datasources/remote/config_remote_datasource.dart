@@ -12,6 +12,7 @@ import '../../models/config/hospital_model.dart';
 import '../../models/config/consultorio_model.dart';
 import '../../models/config/foco_auscultacion_model.dart';
 import '../../models/config/categoria_anomalia_model.dart';
+import '../../models/config/enfermedad_model.dart';
 
 /// Contrato para el data source remoto de configuración
 abstract class ConfigRemoteDataSource {
@@ -28,16 +29,18 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
 
   @override
   Future<MedicalConfigModel> obtenerConfiguracion() async {
-    // Las 3 peticiones se lanzan en paralelo para mayor velocidad
+    // Las 4 peticiones se lanzan en paralelo para mayor velocidad
     final results = await Future.wait([
       _fetchList(ApiConstants.instituciones),
       _fetchList(ApiConstants.focos),
       _fetchList(ApiConstants.categoriasAnomalias),
+      _fetchList(ApiConstants.enfermedades),
     ]);
 
     final institucionesJson = results[0];
     final focosJson = results[1];
     final categoriasJson = results[2];
+    final enfermedadesJson = results[3];
 
     // Construir hospitales desde instituciones
     final hospitales = institucionesJson
@@ -47,14 +50,16 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
         .toList();
 
     // Focos
-    final focos = focosJson
-        .map((j) => FocoAuscultacionModel.fromJson(j))
-        .toList();
+    final focos =
+        focosJson.map((j) => FocoAuscultacionModel.fromJson(j)).toList();
 
     // Categorías
-    final categorias = categoriasJson
-        .map((j) => CategoriaAnomaliaModel.fromJson(j))
-        .toList();
+    final categorias =
+        categoriasJson.map((j) => CategoriaAnomaliaModel.fromJson(j)).toList();
+
+    // Enfermedades
+    final enfermedades =
+        enfermedadesJson.map((j) => EnfermedadModel.fromJson(j)).toList();
 
     // Consultorios: necesitamos una petición por institución activa
     final consultorios = await _fetchTodosConsultorios(institucionesJson);
@@ -64,6 +69,7 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
       consultorios: consultorios,
       focos: focos,
       categoriasAnomalias: categorias,
+      enfermedades: enfermedades,
     );
   }
 
@@ -75,16 +81,15 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
     late http.Response response;
 
     try {
-      response = await httpClient
-          .get(url, headers: {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 15));
+      response = await httpClient.get(url, headers: {
+        'Accept': 'application/json'
+      }).timeout(const Duration(seconds: 15));
     } catch (e) {
       throw NetworkException('Sin conexión al obtener $path: $e');
     }
 
     if (response.statusCode != 200) {
-      throw ServerException(
-          'Error al obtener $path (${response.statusCode})');
+      throw ServerException('Error al obtener $path (${response.statusCode})');
     }
 
     try {
@@ -110,6 +115,7 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
 
     final id = json['id'];
     return HospitalModel(
+      id: id as int?,
       nombre: json['nombre'] as String? ?? '',
       // El código del hospital es el id numérico convertido a String
       codigo: id?.toString() ?? '',
@@ -135,14 +141,13 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
   /// Obtiene consultorios de UNA institución
   Future<List<ConsultorioModel>> _fetchConsultoriosPorInstitucion(
       int institucionId) async {
-    final path =
-        ApiConstants.consultoriosPorInstitucion(institucionId);
+    final path = ApiConstants.consultoriosPorInstitucion(institucionId);
     final url = Uri.parse('${ApiConstants.baseUrl}$path');
 
     try {
-      final response = await httpClient
-          .get(url, headers: {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 15));
+      final response = await httpClient.get(url, headers: {
+        'Accept': 'application/json'
+      }).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 404) return [];
       if (response.statusCode != 200) return [];
@@ -154,8 +159,7 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
         final map = j as Map<String, dynamic>;
         return ConsultorioModel(
           nombre: map['nombre'] as String? ?? '',
-          codigo: map['codigo'] as String? ??
-              (map['id']?.toString() ?? ''),
+          codigo: map['codigo'] as String? ?? (map['id']?.toString() ?? ''),
           codigoHospital: (map['institucionId'] ?? institucionId).toString(),
         );
       }).toList();

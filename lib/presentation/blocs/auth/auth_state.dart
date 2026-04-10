@@ -22,6 +22,14 @@ class AuthRegistradoExitosamente extends AuthState {
   List<Object?> get props => [usuario];
 }
 
+class AuthLogueadoExitosamente extends AuthState {
+  final UsuarioModel usuario;
+  const AuthLogueadoExitosamente(this.usuario);
+
+  @override
+  List<Object?> get props => [usuario];
+}
+
 class AuthError extends AuthState {
   final String mensaje;
   const AuthError(this.mensaje);

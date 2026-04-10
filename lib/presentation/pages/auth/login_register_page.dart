@@ -5,13 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
+import '../../blocs/theme/theme_cubit.dart';
 import '../../theme/medical_colors.dart';
 
-/// Página inicial: permite registrar un nuevo usuario o iniciar sesión.
-///
-/// En la versión actual la API solo provee /register, por lo que el tab
-/// "Iniciar sesión" muestra un aviso informativo. Cuando el backend
-/// implemente /login simplemente se agrega la llamada aquí.
 class LoginRegisterPage extends StatelessWidget {
   const LoginRegisterPage({super.key});
 
@@ -22,28 +18,58 @@ class LoginRegisterPage extends StatelessWidget {
         if (state is AuthRegistradoExitosamente) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('¡Cuenta creada exitosamente! Ya puedes usar la app.'),
+              content: Text(
+                  '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.'),
               backgroundColor: MedicalColors.successGreen,
               behavior: SnackBarBehavior.floating,
             ),
           );
-          // Navegar al formulario después de un registro exitoso
-          Navigator.of(context).pushReplacementNamed('/formulario');
+        }
+        if (state is AuthLogueadoExitosamente) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('¡Bienvenido, ${state.usuario.nombreUsuario}!'),
+              backgroundColor: MedicalColors.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          Navigator.of(context).pushReplacementNamed('/home');
         }
       },
       builder: (context, state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
         return Scaffold(
-          backgroundColor: MedicalColors.backgroundLight,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                children: [
-                  _Header(),
-                  const SizedBox(height: 40),
-                  _AuthCard(),
-                ],
-              ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    children: [
+                      const _Header(),
+                      const SizedBox(height: 40),
+                      const _AuthCard(),
+                    ],
+                  ),
+                ),
+                // Botón de tema en esquina superior derecha
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: Icon(
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      color: context.primary,
+                    ),
+                    tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
+                    onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -55,19 +81,23 @@ class LoginRegisterPage extends StatelessWidget {
 // ─── Header ─────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
+  const _Header();
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         Container(
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: MedicalColors.primaryBlue,
+            gradient: context.primaryGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: MedicalColors.primaryBlue.withAlpha((0.35 * 255).toInt()),
+                color: context.primary.withAlpha(90),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -76,22 +106,14 @@ class _Header extends StatelessWidget {
           child: const Icon(Icons.favorite, color: Colors.white, size: 40),
         ),
         const SizedBox(height: 20),
-        const Text(
+        Text(
           'ASCS',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: MedicalColors.primaryBlue,
-            letterSpacing: 2,
-          ),
+          style: theme.textTheme.headlineLarge,
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Etiquetado Cardíaco',
-          style: TextStyle(
-            fontSize: 16,
-            color: MedicalColors.textSecondary,
-          ),
+          style: theme.textTheme.bodyMedium,
         ),
       ],
     );
@@ -101,6 +123,8 @@ class _Header extends StatelessWidget {
 // ─── Tarjeta con tabs ────────────────────────────────────────────────────────
 
 class _AuthCard extends StatefulWidget {
+  const _AuthCard();
+
   @override
   State<_AuthCard> createState() => _AuthCardState();
 }
@@ -125,8 +149,6 @@ class _AuthCardState extends State<_AuthCard>
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -134,20 +156,21 @@ class _AuthCardState extends State<_AuthCard>
             // Tabs
             Container(
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: context.inputFill,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: TabBar(
                 controller: _tabController,
                 indicator: BoxDecoration(
-                  color: MedicalColors.primaryBlue,
+                  color: context.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 labelColor: Colors.white,
-                unselectedLabelColor: MedicalColors.textSecondary,
-                labelStyle: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 15),
+                unselectedLabelColor: context.onSurfaceSecondary,
+                labelStyle:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
                 tabs: const [
                   Tab(text: 'Iniciar sesión'),
                   Tab(text: 'Registrarse'),
@@ -171,68 +194,106 @@ class _AuthCardState extends State<_AuthCard>
 
 // ─── Tab: Iniciar sesión ─────────────────────────────────────────────────────
 
-class _LoginTab extends StatelessWidget {
+class _LoginTab extends StatefulWidget {
   const _LoginTab({super.key});
 
   @override
+  State<_LoginTab> createState() => _LoginTabState();
+}
+
+class _LoginTabState extends State<_LoginTab> {
+  final _formKey = GlobalKey<FormState>();
+  final _nombreCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _showPass = false;
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    context.read<AuthBloc>().add(LoginUsuarioEvent(
+          nombreUsuario: _nombreCtrl.text.trim(),
+          contrasena: _passCtrl.text,
+        ));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MedicalColors.primaryBlue.withAlpha((0.06 * 255).toInt()),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: MedicalColors.primaryBlue.withAlpha((0.2 * 255).toInt()),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.lock_clock_outlined,
-            size: 48,
-            color: MedicalColors.primaryBlue.withAlpha((0.6 * 255).toInt()),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Próximamente',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: MedicalColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'El inicio de sesión estará disponible cuando el servidor '
-            'implemente el endpoint /api/auth/login.\n\n'
-            'Por ahora, regístrate para crear tu cuenta y acceder a la aplicación.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: MedicalColors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Botón de acceso directo (sin autenticación) para desarrollo
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  Navigator.of(context).pushReplacementNamed('/formulario'),
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Continuar sin cuenta'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: MedicalColors.primaryBlue,
-                side: const BorderSide(color: MedicalColors.primaryBlue),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+
+        return Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (state is AuthError) ...[
+                _ErrorBanner(message: state.mensaje),
+                const SizedBox(height: 16),
+              ],
+              TextFormField(
+                controller: _nombreCtrl,
+                enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Nombre de usuario',
+                  prefixIcon:
+                      Icon(Icons.person_outline, color: context.primary),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'El nombre de usuario es obligatorio';
+                  return null;
+                },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
-            ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passCtrl,
+                obscureText: !_showPass,
+                enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: Icon(Icons.lock_outline, color: context.primary),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _showPass ? Icons.visibility_off : Icons.visibility,
+                      color: context.hint,
+                    ),
+                    onPressed: () => setState(() => _showPass = !_showPass),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty)
+                    return 'La contraseña es obligatoria';
+                  return null;
+                },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _submit,
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Text('Iniciar sesión'),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -284,123 +345,108 @@ class _RegisterTabState extends State<_RegisterTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Error de servidor
               if (state is AuthError) ...[
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: MedicalColors.errorRed.withAlpha((0.08 * 255).toInt()),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: MedicalColors.errorRed.withAlpha((0.3 * 255).toInt()),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline,
-                          color: MedicalColors.errorRed, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          state.mensaje,
-                          style: const TextStyle(
-                            color: MedicalColors.errorRed,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _ErrorBanner(message: state.mensaje),
                 const SizedBox(height: 16),
               ],
-
-              _buildTextField(
+              TextFormField(
                 controller: _nombreCtrl,
-                label: 'Nombre de usuario',
-                icon: Icons.person_outline,
                 enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Nombre de usuario',
+                  prefixIcon:
+                      Icon(Icons.person_outline, color: context.primary),
+                ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
+                  if (v == null || v.trim().isEmpty)
                     return 'El nombre de usuario es obligatorio';
-                  }
-                  if (v.trim().length < 3) {
-                    return 'Mínimo 3 caracteres';
-                  }
+                  if (v.trim().length < 3) return 'Mínimo 3 caracteres';
                   return null;
                 },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
               const SizedBox(height: 16),
-
-              _buildTextField(
+              TextFormField(
                 controller: _emailCtrl,
-                label: 'Correo electrónico',
-                icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Correo electrónico',
+                  prefixIcon:
+                      Icon(Icons.email_outlined, color: context.primary),
+                ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
+                  if (v == null || v.trim().isEmpty)
                     return 'El correo es obligatorio';
-                  }
                   final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w+$');
-                  if (!emailRegex.hasMatch(v.trim())) {
+                  if (!emailRegex.hasMatch(v.trim()))
                     return 'Ingresa un correo válido';
-                  }
                   return null;
                 },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
               const SizedBox(height: 16),
-
-              _buildPasswordField(
+              TextFormField(
                 controller: _passCtrl,
-                label: 'Contraseña',
-                show: _showPass,
-                onToggle: () => setState(() => _showPass = !_showPass),
+                obscureText: !_showPass,
                 enabled: !isLoading,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: Icon(Icons.lock_outline, color: context.primary),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _showPass ? Icons.visibility_off : Icons.visibility,
+                      color: context.hint,
+                    ),
+                    onPressed: () => setState(() => _showPass = !_showPass),
+                  ),
+                ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'La contraseña es obligatoria';
+                  if (v == null || v.isEmpty)
+                    return 'La contraseña es obligatoria';
                   if (v.length < 8) return 'Mínimo 8 caracteres';
-                  if (!RegExp(r'[A-Z]').hasMatch(v)) {
+                  if (!RegExp(r'[A-Z]').hasMatch(v))
                     return 'Debe tener al menos una mayúscula';
-                  }
-                  if (!RegExp(r'[0-9]').hasMatch(v)) {
+                  if (!RegExp(r'[0-9]').hasMatch(v))
                     return 'Debe tener al menos un número';
-                  }
                   return null;
                 },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
               const SizedBox(height: 16),
-
-              _buildPasswordField(
+              TextFormField(
                 controller: _confirmPassCtrl,
-                label: 'Confirmar contraseña',
-                show: _showConfirmPass,
-                onToggle: () =>
-                    setState(() => _showConfirmPass = !_showConfirmPass),
+                obscureText: !_showConfirmPass,
                 enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Confirmar contraseña',
+                  prefixIcon: Icon(Icons.lock_outline, color: context.primary),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _showConfirmPass
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: context.hint,
+                    ),
+                    onPressed: () =>
+                        setState(() => _showConfirmPass = !_showConfirmPass),
+                  ),
+                ),
                 validator: (v) {
-                  if (v != _passCtrl.text) {
+                  if (v != _passCtrl.text)
                     return 'Las contraseñas no coinciden';
-                  }
                   return null;
                 },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
               ),
               const SizedBox(height: 28),
-
-              // Requisitos de contraseña
               _PasswordHints(password: _passCtrl.text),
               const SizedBox(height: 20),
-
-              // Botón registrar
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MedicalColors.primaryBlue,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
                   child: isLoading
                       ? const SizedBox(
                           width: 22,
@@ -408,11 +454,7 @@ class _RegisterTabState extends State<_RegisterTab> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2.5, color: Colors.white),
                         )
-                      : const Text(
-                          'Crear cuenta',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                      : const Text('Crear cuenta'),
                 ),
               ),
             ],
@@ -421,66 +463,37 @@ class _RegisterTabState extends State<_RegisterTab> {
       },
     );
   }
+}
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    required bool enabled,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      enabled: enabled,
-      decoration: _inputDeco(label, icon),
-      validator: validator,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-    );
-  }
+// ─── Error banner ────────────────────────────────────────────────────────────
 
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String label,
-    required bool show,
-    required VoidCallback onToggle,
-    required bool enabled,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: !show,
-      enabled: enabled,
-      onChanged: (_) => setState(() {}), // Para actualizar hints en tiempo real
-      decoration: _inputDeco(label, Icons.lock_outline).copyWith(
-        suffixIcon: IconButton(
-          icon: Icon(show ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey),
-          onPressed: onToggle,
-        ),
-      ),
-      validator: validator,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-    );
-  }
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  const _ErrorBanner({required this.message});
 
-  InputDecoration _inputDeco(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: MedicalColors.primaryBlue),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: MedicalColors.errorRed.withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MedicalColors.errorRed.withAlpha(80)),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide:
-            const BorderSide(color: MedicalColors.primaryBlue, width: 2),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline,
+              color: MedicalColors.errorRed, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style:
+                  const TextStyle(color: MedicalColors.errorRed, fontSize: 13),
+            ),
+          ),
+        ],
       ),
-      filled: true,
-      fillColor: Colors.grey.shade50,
     );
   }
 }
@@ -489,7 +502,6 @@ class _RegisterTabState extends State<_RegisterTab> {
 
 class _PasswordHints extends StatelessWidget {
   final String password;
-
   const _PasswordHints({required this.password});
 
   @override
@@ -505,9 +517,9 @@ class _PasswordHints extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: context.inputFill,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.divider),
       ),
       child: Column(
         children: checks
@@ -520,18 +532,15 @@ class _PasswordHints extends StatelessWidget {
                             ? Icons.check_circle_outline
                             : Icons.radio_button_unchecked,
                         size: 16,
-                        color: c.$1
-                            ? MedicalColors.successGreen
-                            : Colors.grey.shade400,
+                        color: c.$1 ? MedicalColors.successGreen : context.hint,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         c.$2,
                         style: TextStyle(
                           fontSize: 12,
-                          color: c.$1
-                              ? MedicalColors.successGreen
-                              : Colors.grey.shade500,
+                          color:
+                              c.$1 ? MedicalColors.successGreen : context.hint,
                         ),
                       ),
                     ],
