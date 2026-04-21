@@ -52,9 +52,13 @@ class FormularioError extends FormularioState {
 /// Estado cuando el diagnóstico IA fue recibido exitosamente
 class DiagnosticoIARecibido extends FormularioState {
   final DiagnoseResponseModel resultado;
+  final bool guardadoEnServidor;
 
-  const DiagnosticoIARecibido({required this.resultado});
+  const DiagnosticoIARecibido({
+    required this.resultado,
+    this.guardadoEnServidor = false,
+  });
 
   @override
-  List<Object?> get props => [resultado];
+  List<Object?> get props => [resultado, guardadoEnServidor];
 }

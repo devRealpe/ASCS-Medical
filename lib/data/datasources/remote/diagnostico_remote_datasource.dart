@@ -26,6 +26,7 @@ abstract class DiagnosticoRemoteDataSource {
     required String genero,
     required double altura,
     required double peso,
+    double? precision,
     required String diagnosticoTexto,
     required int focoId,
     int? categoriaAnomaliaId,
@@ -60,8 +61,8 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
       response = await httpClient
           .get(url, headers: _authHeaders)
           .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw NetworkException('No se pudo conectar con el servidor: $e');
+    } catch (_) {
+      throw const NetworkException('No se pudo conectar con el servidor');
     }
 
     if (response.statusCode == 401) {
@@ -69,8 +70,9 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
     }
 
     if (response.statusCode != 200) {
-      throw ServerException(
-          'Error al obtener diagnósticos (${response.statusCode})');
+      throw const ServerException(
+        'No pudimos cargar los diagnósticos en este momento.',
+      );
     }
 
     try {
@@ -79,8 +81,10 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
       return data
           .map((g) => DiagnosticoGrupoModel.fromJson(g as Map<String, dynamic>))
           .toList();
-    } catch (e) {
-      throw ServerException('Error al parsear diagnósticos: $e');
+    } catch (_) {
+      throw const ServerException(
+        'No pudimos interpretar la respuesta del servidor.',
+      );
     }
   }
 
@@ -101,8 +105,8 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
             body: jsonEncode({'valvulopatia': valvulopatia}),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw NetworkException('No se pudo conectar con el servidor: $e');
+    } catch (_) {
+      throw const NetworkException('No se pudo conectar con el servidor');
     }
 
     if (response.statusCode == 401) {
@@ -110,12 +114,9 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
     }
 
     if (response.statusCode != 200) {
-      final body = _tryDecodeBody(response);
-      final message = body is Map
-          ? (body['message'] ?? 'Error desconocido').toString()
-          : 'Error del servidor';
-      throw ServerException(
-          'Error al confirmar valvulopatía (${response.statusCode}): $message');
+      throw const ServerException(
+        'No pudimos actualizar el diagnóstico en este momento.',
+      );
     }
 
     // La respuesta contiene el resumen, pero reconstruimos el modelo
@@ -128,14 +129,6 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
     );
   }
 
-  dynamic _tryDecodeBody(http.Response response) {
-    try {
-      return jsonDecode(response.body);
-    } catch (_) {
-      return response.body;
-    }
-  }
-
   @override
   Future<DiagnosticoModel> crearDiagnostico({
     required int institucionId,
@@ -144,6 +137,7 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
     required String genero,
     required double altura,
     required double peso,
+    double? precision,
     required String diagnosticoTexto,
     required int focoId,
     int? categoriaAnomaliaId,
@@ -160,6 +154,7 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
       'genero': genero,
       'altura': altura,
       'peso': peso,
+      if (precision != null) 'precision': precision,
       'diagnosticoTexto': diagnosticoTexto,
       'focoId': focoId,
       'categoriaAnomaliaId': categoriaAnomaliaId,
@@ -178,8 +173,8 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw NetworkException('No se pudo conectar con el servidor: $e');
+    } catch (_) {
+      throw const NetworkException('No se pudo conectar con el servidor');
     }
 
     if (response.statusCode == 401) {
@@ -187,21 +182,9 @@ class DiagnosticoRemoteDataSourceImpl implements DiagnosticoRemoteDataSource {
     }
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      final respBody = _tryDecodeBody(response);
-      // Incluir detalles de validación en el mensaje de error
-      String message;
-      if (respBody is Map) {
-        final msg = (respBody['message'] ?? 'Error desconocido').toString();
-        final errors =
-            respBody['errors'] ?? respBody['details'] ?? respBody['data'];
-        message = errors != null
-            ? '$msg | Detalles: $errors'
-            : '$msg | Body: $respBody';
-      } else {
-        message = 'Error del servidor: $respBody';
-      }
-      throw ServerException(
-          'Error al crear diagnóstico (${response.statusCode}): $message');
+      throw const ServerException(
+        'No pudimos guardar el diagnóstico en el servidor.',
+      );
     }
 
     final respBody = jsonDecode(response.body) as Map<String, dynamic>;

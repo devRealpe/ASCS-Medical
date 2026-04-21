@@ -51,7 +51,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           )
           .timeout(const Duration(seconds: 15));
     } catch (e) {
-      throw NetworkException('No se pudo conectar con el servidor: $e');
+      throw NetworkException('No se pudo conectar con el servidor');
     }
 
     final body = _decodeBody(response);
@@ -108,7 +108,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           )
           .timeout(const Duration(seconds: 15));
     } catch (e) {
-      throw NetworkException('No se pudo conectar con el servidor: $e');
+      throw NetworkException('No se pudo conectar con el servidor');
     }
 
     final body = _decodeBody(response);

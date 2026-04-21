@@ -2,6 +2,9 @@
 
 import 'dart:developer' as developer;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/errors/exceptions.dart';
+import '../../../core/errors/failures.dart';
+import '../../../core/errors/user_friendly_error_mapper.dart';
 import '../../../core/network/network_info.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/storage_preference_service.dart';
@@ -85,7 +88,9 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     );
 
     await nombreArchivoResult.fold(
-      (failure) async => emit(FormularioError(mensaje: failure.message)),
+      (failure) async => emit(
+        FormularioError(mensaje: _friendlyFailure(failure)),
+      ),
       (fileName) async {
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
@@ -135,7 +140,9 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         );
 
         result.fold(
-          (failure) => emit(FormularioError(mensaje: failure.message)),
+          (failure) => emit(
+            FormularioError(mensaje: _friendlyFailure(failure)),
+          ),
           (_) => emit(const FormularioEnviadoExitosamente(
             mensaje: 'Datos guardados localmente con éxito',
           )),
@@ -159,10 +166,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
 
     if (!hasConnection) {
       emit(const FormularioError(
-        mensaje: 'No hay conexión a Internet. Por favor, verifica:\n'
-            '• Que estés conectado a WiFi o datos móviles\n'
-            '• Que tu conexión tenga acceso a Internet\n'
-            '• Que no estés en modo avión',
+        mensaje: UserFriendlyErrorMapper.networkConnectionMessage,
       ));
       return;
     }
@@ -199,7 +203,9 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     );
 
     await nombreArchivoResult.fold(
-      (failure) async => emit(FormularioError(mensaje: failure.message)),
+      (failure) async => emit(
+        FormularioError(mensaje: _friendlyFailure(failure)),
+      ),
       (fileName) async {
         final edad =
             DateTime.now().difference(event.fechaNacimiento).inDays ~/ 365;
@@ -246,27 +252,9 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         );
 
         result.fold(
-          (failure) {
-            String errorMessage = failure.message;
-
-            if (failure.message.toLowerCase().contains('conexión') ||
-                failure.message.toLowerCase().contains('network')) {
-              errorMessage = 'Error de conexión:\n${failure.message}\n\n'
-                  'Sugerencias:\n'
-                  '• Verifica tu conexión a Internet\n'
-                  '• Intenta acercarte a tu router WiFi\n'
-                  '• Si usas datos móviles, verifica tu señal';
-            } else if (failure.message.toLowerCase().contains('tiempo')) {
-              errorMessage =
-                  'La operación tomó demasiado tiempo:\n${failure.message}\n\n'
-                  'Tu conexión puede ser muy lenta. Intenta:\n'
-                  '• Conectarte a una red WiFi más rápida\n'
-                  '• Verificar que no haya otras descargas activas\n'
-                  '• Intentar nuevamente más tarde';
-            }
-
-            emit(FormularioError(mensaje: errorMessage));
-          },
+          (failure) => emit(
+            FormularioError(mensaje: _friendlyFailure(failure)),
+          ),
           (_) => emit(const FormularioEnviadoExitosamente(
             mensaje: 'Datos enviados a la nube exitosamente',
           )),
@@ -296,10 +284,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     final hasConnection = await networkInfo.isConnected;
     if (!hasConnection) {
       emit(const FormularioError(
-        mensaje: 'No hay conexión a Internet. Por favor, verifica:\n'
-            '• Que estés conectado a WiFi o datos móviles\n'
-            '• Que tu conexión tenga acceso a Internet\n'
-            '• Que no estés en modo avión',
+        mensaje: UserFriendlyErrorMapper.networkConnectionMessage,
       ));
       return;
     }
@@ -313,7 +298,10 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     try {
       audios = await localStorageDataSource.extraerAudiosDeZip(event.zipFile);
     } catch (e) {
-      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      emit(const FormularioError(
+        mensaje: 'No pudimos procesar el archivo de audio.\n'
+            'Verifica que el archivo no esté dañado e intenta de nuevo.',
+      ));
       return;
     }
 
@@ -368,8 +356,13 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         mensaje: 'Muestra de entrenamiento enviada exitosamente',
       ));
     } catch (e) {
+      developer.log('Error enviar entrenamiento (StorageMode): $e',
+          name: 'FORMULARIO');
       emit(FormularioError(
-        mensaje: 'Error al enviar muestra de entrenamiento:\n$e',
+        mensaje: UserFriendlyErrorMapper.fromMessage(
+          e.toString(),
+          fallback: UserFriendlyErrorMapper.serverUnavailableMessage,
+        ),
       ));
     }
   }
@@ -388,7 +381,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     final hasConnection = await networkInfo.isConnected;
     if (!hasConnection) {
       emit(const FormularioError(
-        mensaje: 'No hay conexión a Internet. Verifica tu red.',
+        mensaje: UserFriendlyErrorMapper.networkConnectionMessage,
       ));
       return;
     }
@@ -402,7 +395,10 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     try {
       audios = await localStorageDataSource.extraerAudiosDeZip(event.zipFile);
     } catch (e) {
-      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      emit(const FormularioError(
+        mensaje: 'No pudimos procesar el archivo de audio.\n'
+            'Verifica que el archivo no esté dañado e intenta de nuevo.',
+      ));
       return;
     }
 
@@ -457,8 +453,13 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
         mensaje: 'Muestra de entrenamiento enviada exitosamente',
       ));
     } catch (e) {
+      developer.log('Error enviar muestra entrenamiento: $e',
+          name: 'FORMULARIO');
       emit(FormularioError(
-        mensaje: 'Error al enviar muestra de entrenamiento:\n$e',
+        mensaje: UserFriendlyErrorMapper.fromMessage(
+          e.toString(),
+          fallback: UserFriendlyErrorMapper.serverUnavailableMessage,
+        ),
       ));
     }
   }
@@ -483,7 +484,7 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
     final hasConnection = await networkInfo.isConnected;
     if (!hasConnection) {
       emit(const FormularioError(
-        mensaje: 'No hay conexión a Internet. Verifica tu red.',
+        mensaje: UserFriendlyErrorMapper.networkConnectionMessage,
       ));
       return;
     }
@@ -505,7 +506,10 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
           name: 'DIAGNOSE');
     } catch (e) {
       developer.log('ERROR extraer audios: $e', name: 'DIAGNOSE');
-      emit(FormularioError(mensaje: 'Error al extraer audios del ZIP: $e'));
+      emit(const FormularioError(
+        mensaje: 'No pudimos procesar el archivo de audio.\n'
+            'Verifica que el archivo no esté dañado e intenta de nuevo.',
+      ));
       return;
     }
 
@@ -557,16 +561,10 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       );
 
       developer.log('Respuesta IA recibida:', name: 'DIAGNOSE');
-      developer.log('  diagnostico: ${resultado.resultadoIA.diagnostico}',
-          name: 'DIAGNOSE');
+      developer.log('  estado: ${resultado.estado}', name: 'DIAGNOSE');
+      developer.log('  precision: ${resultado.precision}', name: 'DIAGNOSE');
       developer.log(
-          '  tieneValvulopatia: ${resultado.resultadoIA.tieneValvulopatia}',
-          name: 'DIAGNOSE');
-      developer.log('  confianza: ${resultado.resultadoIA.confianza}',
-          name: 'DIAGNOSE');
-      developer.log('  paciente.edad: ${resultado.paciente.edad}',
-          name: 'DIAGNOSE');
-      developer.log('  focoAuscultacion: ${resultado.focoAuscultacion}',
+          '  scores: anormal=${resultado.scores.anormal}, normal=${resultado.scores.normal}',
           name: 'DIAGNOSE');
 
       // ── Guardar diagnóstico: POST /api/diagnostics ────────────────────
@@ -576,35 +574,66 @@ class FormularioBloc extends Bloc<FormularioEvent, FormularioState> {
       ));
 
       final usuarioId = SessionService.instance.usuario?.id;
-      final esNormal =
-          resultado.resultadoIA.diagnostico.toLowerCase() == 'normal';
+      final esNormal = resultado.esNormal;
+      bool guardado = false;
 
-      if (usuarioId != null && event.focoId != null) {
+      developer.log('── POST /api/diagnostics ──', name: 'DIAGNOSE');
+      developer.log(
+          '  usuarioId: $usuarioId, focoId: ${event.focoId}, institucionId: ${event.institucionId}',
+          name: 'DIAGNOSE');
+
+      if (usuarioId != null &&
+          event.focoId != null &&
+          event.institucionId != null) {
         try {
           await diagnosticoRemoteDataSource.crearDiagnostico(
             institucionId: event.institucionId!,
             esNormal: esNormal,
-            edad: resultado.paciente.edad,
-            genero: resultado.paciente.genero,
-            altura: resultado.paciente.alturaCm / 100.0,
-            peso: resultado.paciente.pesoKg,
-            diagnosticoTexto: resultado.resultadoIA.diagnostico,
+            edad: edad,
+            genero: event.genero,
+            altura: event.alturaCm / 100.0,
+            peso: event.pesoCkg,
+            precision: resultado.precision,
+            diagnosticoTexto: resultado.estado,
             focoId: event.focoId!,
             categoriaAnomaliaId: event.categoriaAnomaliaId,
             usuarioCreaId: usuarioId,
-            valvulopatia: resultado.resultadoIA.tieneValvulopatia,
+            valvulopatia: !esNormal,
             enfermedadesBaseIds: event.enfermedadesBaseIds,
           );
-        } catch (_) {
-          // Si falla guardar el diagnóstico, aún mostramos el resultado IA
+          guardado = true;
+          developer.log('  ✓ Diagnóstico guardado exitosamente',
+              name: 'DIAGNOSE');
+        } catch (e) {
+          developer.log('  ✗ Error al guardar diagnóstico: $e',
+              name: 'DIAGNOSE');
         }
+      } else {
+        developer.log(
+            '  ✗ No se guardó: faltan datos (usuario=$usuarioId, foco=${event.focoId}, institucion=${event.institucionId})',
+            name: 'DIAGNOSE');
       }
 
-      emit(DiagnosticoIARecibido(resultado: resultado));
-    } catch (e) {
+      emit(DiagnosticoIARecibido(
+        resultado: resultado,
+        guardadoEnServidor: guardado,
+      ));
+    } on NetworkException catch (e) {
       emit(FormularioError(
-        mensaje: 'Error al obtener diagnóstico IA:\n$e',
+        mensaje: UserFriendlyErrorMapper.fromError(e),
+      ));
+    } catch (e) {
+      developer.log('Error diagnóstico IA: $e', name: 'DIAGNOSE');
+      emit(FormularioError(
+        mensaje: UserFriendlyErrorMapper.fromMessage(
+          e.toString(),
+          fallback: UserFriendlyErrorMapper.serverUnavailableMessage,
+        ),
       ));
     }
+  }
+
+  String _friendlyFailure(Failure failure) {
+    return UserFriendlyErrorMapper.fromFailure(failure);
   }
 }

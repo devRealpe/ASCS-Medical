@@ -67,31 +67,27 @@ class TrainRemoteDataSourceImpl implements TrainRemoteDataSource {
     try {
       streamedResponse =
           await request.send().timeout(const Duration(seconds: 120));
-    } catch (e) {
-      throw NetworkException(
-          'No se pudo conectar con el servidor de entrenamiento: $e');
+    } catch (_) {
+      throw const NetworkException(
+        'No se pudo conectar con el servidor de entrenamiento',
+      );
     }
 
     final responseBody = await streamedResponse.stream.bytesToString();
 
     if (streamedResponse.statusCode != 200) {
-      String errorMsg;
-      try {
-        final body = jsonDecode(responseBody) as Map<String, dynamic>;
-        errorMsg =
-            body['message'] as String? ?? 'Error del servidor de entrenamiento';
-      } catch (_) {
-        errorMsg =
-            'Error del servidor (${streamedResponse.statusCode}): $responseBody';
-      }
-      throw ServerException(errorMsg);
+      throw const ServerException(
+        'No pudimos enviar el audio de entrenamiento en este momento.',
+      );
     }
 
     try {
       final body = jsonDecode(responseBody) as Map<String, dynamic>;
       return TrainResponseModel.fromJson(body);
-    } catch (e) {
-      throw ServerException('Error al interpretar la respuesta: $e');
+    } catch (_) {
+      throw const ServerException(
+        'No pudimos interpretar la respuesta del servidor de entrenamiento.',
+      );
     }
   }
 }

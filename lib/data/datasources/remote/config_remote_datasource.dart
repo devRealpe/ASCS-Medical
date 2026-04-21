@@ -84,12 +84,14 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
       response = await httpClient.get(url, headers: {
         'Accept': 'application/json'
       }).timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw NetworkException('Sin conexión al obtener $path: $e');
+    } catch (_) {
+      throw const NetworkException('No se pudo conectar con el servidor');
     }
 
     if (response.statusCode != 200) {
-      throw ServerException('Error al obtener $path (${response.statusCode})');
+      throw const ServerException(
+        'No pudimos cargar la configuración del servidor.',
+      );
     }
 
     try {
@@ -103,7 +105,9 @@ class ConfigRemoteDataSourceImpl implements ConfigRemoteDataSource {
       }
       return [];
     } catch (_) {
-      throw CacheException('Respuesta inválida de $path');
+      throw const CacheException(
+        'No pudimos interpretar la configuración del servidor.',
+      );
     }
   }
 

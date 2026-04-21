@@ -1,7 +1,7 @@
 // lib/data/datasources/remote/diagnose_remote_datasource.dart
 //
-// Servicio 3 — POST /api/v1/diagnose
-// Envía un audio + metadatos para obtener diagnóstico de la IA.
+// Servicio 3 — POST /predict
+// Envía un audio + metadatos para obtener predicción de la IA.
 
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -14,8 +14,8 @@ import '../../models/diagnostico/diagnose_response_model.dart';
 
 /// Contrato para el datasource de diagnóstico IA (Servicio 3)
 abstract class DiagnoseRemoteDataSource {
-  /// Envía un audio .wav y metadatos JSON al endpoint /api/v1/diagnose.
-  /// Retorna el resultado del diagnóstico de la IA.
+  /// Envía un audio .wav y metadatos JSON al endpoint /predict.
+  /// Retorna el resultado de la predicción de la IA.
   Future<DiagnoseResponseModel> diagnosticar({
     required File audioFile,
     required Map<String, dynamic> metadataJson,
@@ -37,7 +37,7 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
     }
 
     final uri =
-        Uri.parse('${ApiConstants.service3BaseUrl}${ApiConstants.diagnose}');
+        Uri.parse('${ApiConstants.service3BaseUrl}${ApiConstants.predict}');
 
     developer.log('═══════════════════════════════════════', name: 'DIAGNOSE');
     developer.log('URL: $uri', name: 'DIAGNOSE');
@@ -49,9 +49,6 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
 
     final request = http.MultipartRequest('POST', uri);
 
-    // Campo: json_metadata (string JSON)
-    request.fields['json_metadata'] = jsonEncode(metadataJson);
-
     // Campo: audio (archivo .wav)
     request.files.add(
       await http.MultipartFile.fromPath(
@@ -59,6 +56,21 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
         audioFile.path,
         filename: audioFile.path.split(Platform.pathSeparator).last,
         contentType: MediaType('audio', 'wav'),
+      ),
+    );
+
+    // Campo: metadata_file (archivo JSON)
+    final jsonString = jsonEncode(metadataJson);
+    final audioFileName = audioFile.path
+        .split(Platform.pathSeparator)
+        .last
+        .replaceAll('.wav', '');
+    request.files.add(
+      http.MultipartFile.fromString(
+        'metadata_file',
+        jsonString,
+        filename: '$audioFileName.json',
+        contentType: MediaType('application', 'json'),
       ),
     );
 
@@ -74,8 +86,9 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
           await request.send().timeout(const Duration(seconds: 120));
     } catch (e) {
       developer.log('ERROR de conexión: $e', name: 'DIAGNOSE');
-      throw NetworkException(
-          'No se pudo conectar con el servicio de diagnóstico: $e');
+      throw const NetworkException(
+        'No se pudo conectar con el servicio de diagnóstico',
+      );
     }
 
     final responseBody = await streamedResponse.stream.bytesToString();
@@ -86,17 +99,9 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
     developer.log('═══════════════════════════════════════', name: 'DIAGNOSE');
 
     if (streamedResponse.statusCode != 200) {
-      String errorMsg;
-      try {
-        final body = jsonDecode(responseBody) as Map<String, dynamic>;
-        errorMsg = body['detail'] as String? ??
-            body['message'] as String? ??
-            'Error del servicio de diagnóstico';
-      } catch (_) {
-        errorMsg =
-            'Error del servidor (${streamedResponse.statusCode}): $responseBody';
-      }
-      throw ServerException(errorMsg);
+      throw const ServerException(
+        'No pudimos obtener el diagnóstico en este momento.',
+      );
     }
 
     try {
@@ -105,7 +110,9 @@ class DiagnoseRemoteDataSourceImpl implements DiagnoseRemoteDataSource {
       return DiagnoseResponseModel.fromJson(body);
     } catch (e) {
       developer.log('ERROR parsing response: $e', name: 'DIAGNOSE');
-      throw ServerException('Error al interpretar la respuesta: $e');
+      throw const ServerException(
+        'No pudimos interpretar la respuesta del servicio de diagnóstico.',
+      );
     }
   }
 }

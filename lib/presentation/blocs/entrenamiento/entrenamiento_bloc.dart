@@ -3,6 +3,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../core/errors/user_friendly_error_mapper.dart';
 import '../../../core/services/session_service.dart';
 import '../../../data/datasources/remote/diagnose_remote_datasource.dart';
 import '../../../data/datasources/remote/diagnostico_remote_datasource.dart';
@@ -74,8 +75,7 @@ class EntrenamientoBloc extends Bloc<EntrenamientoEvent, EntrenamientoState> {
       ));
 
       final usuarioId = SessionService.instance.usuario?.id;
-      final esNormal =
-          response.resultadoIA.diagnostico.toLowerCase() == 'normal';
+      final esNormal = response.esNormal;
 
       bool guardado = false;
 
@@ -89,19 +89,12 @@ class EntrenamientoBloc extends Bloc<EntrenamientoEvent, EntrenamientoState> {
           event.focoId != null &&
           event.institucionId != null) {
         try {
-          // Normalizar género a minúsculas (la API espera "masculino"/"femenino")
-          final generoNormalizado = response.paciente.genero.toLowerCase();
-
-          developer.log(
-              '  genero: ${response.paciente.genero} → $generoNormalizado',
+          developer.log('  genero: ${event.genero}', name: 'ENTRENAMIENTO');
+          developer.log('  altura: ${event.alturaCm} cm',
               name: 'ENTRENAMIENTO');
-          developer.log('  altura: ${response.paciente.alturaCm} cm',
+          developer.log('  esNormal: $esNormal, estado: ${response.estado}',
               name: 'ENTRENAMIENTO');
-          developer.log(
-              '  esNormal: $esNormal, diagnostico: ${response.resultadoIA.diagnostico}',
-              name: 'ENTRENAMIENTO');
-          developer.log(
-              '  peso: ${response.paciente.pesoKg}, edad: ${response.paciente.edad}',
+          developer.log('  peso: ${event.pesoKg}, edad: ${event.edad}',
               name: 'ENTRENAMIENTO');
 
           // Seleccionar categoría de anomalía: la primera disponible si no es normal
@@ -112,15 +105,16 @@ class EntrenamientoBloc extends Bloc<EntrenamientoEvent, EntrenamientoState> {
           await diagnosticoDataSource.crearDiagnostico(
             institucionId: event.institucionId!,
             esNormal: esNormal,
-            edad: response.paciente.edad,
-            genero: generoNormalizado,
-            altura: response.paciente.alturaCm / 100.0, // cm → metros
-            peso: response.paciente.pesoKg,
-            diagnosticoTexto: response.resultadoIA.diagnostico,
+            edad: event.edad,
+            genero: event.genero,
+            altura: event.alturaCm / 100.0,
+            peso: event.pesoKg,
+            precision: response.precision,
+            diagnosticoTexto: response.estado,
             focoId: event.focoId!,
             categoriaAnomaliaId: catAnomaliaId,
             usuarioCreaId: usuarioId,
-            valvulopatia: response.resultadoIA.tieneValvulopatia,
+            valvulopatia: !esNormal,
           );
           guardado = true;
           developer.log('  ✓ Diagnóstico guardado exitosamente',
@@ -141,14 +135,23 @@ class EntrenamientoBloc extends Bloc<EntrenamientoEvent, EntrenamientoState> {
         guardadoEnServidor: guardado,
       ));
     } on FileException catch (e) {
-      emit(EntrenamientoError(mensaje: e.message));
+      emit(EntrenamientoError(
+        mensaje: UserFriendlyErrorMapper.fromError(e),
+      ));
     } on NetworkException catch (e) {
       emit(EntrenamientoError(
-          mensaje: 'Sin conexión al servidor.\nDetalle: ${e.message}'));
+        mensaje: UserFriendlyErrorMapper.fromError(e),
+      ));
     } on ServerException catch (e) {
-      emit(EntrenamientoError(mensaje: e.message));
+      emit(EntrenamientoError(
+        mensaje: UserFriendlyErrorMapper.fromError(e),
+      ));
     } catch (e) {
-      emit(EntrenamientoError(mensaje: 'Error inesperado: $e'));
+      developer.log('Error inesperado entrenamiento: $e',
+          name: 'ENTRENAMIENTO');
+      emit(const EntrenamientoError(
+        mensaje: UserFriendlyErrorMapper.unexpectedErrorMessage,
+      ));
     }
   }
 

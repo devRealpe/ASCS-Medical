@@ -120,6 +120,7 @@ class FormFieldsState extends State<FormFields> {
               items: _getConsultoriosDisponibles(),
               value: widget.consultorio,
               onChanged: widget.onConsultorioChanged,
+              required: _getConsultoriosDisponibles().isNotEmpty,
             ),
           ],
         ),
@@ -618,75 +619,81 @@ class FormFieldsState extends State<FormFields> {
     final enfermedadesDisponibles =
         widget.config.enfermedades.map((e) => e.nombre).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: primary.withAlpha(25),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.coronavirus_outlined, color: primary, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Enfermedades base',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: context.onSurfaceSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (enfermedadesDisponibles.isEmpty)
-          Text(
-            'No hay enfermedades disponibles',
-            style: TextStyle(
-              color: context.hint,
-              fontStyle: FontStyle.italic,
-            ),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: enfermedadesDisponibles.map((nombre) {
-              final selected = _enfermedadesSeleccionadas.contains(nombre);
-              return FilterChip(
-                label: Text(nombre),
-                selected: selected,
-                onSelected: (isSelected) {
-                  setState(() {
-                    if (isSelected) {
-                      _enfermedadesSeleccionadas.add(nombre);
-                    } else {
-                      _enfermedadesSeleccionadas.remove(nombre);
-                    }
-                  });
-                  widget.onEnfermedadesChanged(
-                      List.from(_enfermedadesSeleccionadas));
-                },
-                selectedColor: primary.withAlpha(40),
-                checkmarkColor: primary,
-                labelStyle: TextStyle(
-                  color: selected ? primary : context.onSurfaceSecondary,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: selected ? primary : context.divider,
-                  ),
-                ),
-              );
-            }).toList(),
+    final selCount = _enfermedadesSeleccionadas.length;
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(top: 4, bottom: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: primary.withAlpha(25),
+            borderRadius: BorderRadius.circular(8),
           ),
-      ],
+          child: Icon(Icons.coronavirus_outlined, color: primary, size: 20),
+        ),
+        title: Text(
+          'Enfermedades base',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: context.onSurfaceSecondary,
+          ),
+        ),
+        subtitle: selCount > 0
+            ? Text(
+                '$selCount seleccionada${selCount > 1 ? 's' : ''}',
+                style: TextStyle(fontSize: 12, color: primary),
+              )
+            : null,
+        children: [
+          if (enfermedadesDisponibles.isEmpty)
+            Text(
+              'No hay enfermedades disponibles',
+              style: TextStyle(
+                color: context.hint,
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: enfermedadesDisponibles.map((nombre) {
+                final selected = _enfermedadesSeleccionadas.contains(nombre);
+                return FilterChip(
+                  label: Text(nombre),
+                  selected: selected,
+                  onSelected: (isSelected) {
+                    setState(() {
+                      if (isSelected) {
+                        _enfermedadesSeleccionadas.add(nombre);
+                      } else {
+                        _enfermedadesSeleccionadas.remove(nombre);
+                      }
+                    });
+                    widget.onEnfermedadesChanged(
+                        List.from(_enfermedadesSeleccionadas));
+                  },
+                  selectedColor: primary.withAlpha(40),
+                  checkmarkColor: primary,
+                  labelStyle: TextStyle(
+                    color: selected ? primary : context.onSurfaceSecondary,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: selected ? primary : context.divider,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 

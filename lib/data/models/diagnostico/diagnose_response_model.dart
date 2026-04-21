@@ -1,88 +1,68 @@
 // lib/data/models/diagnostico/diagnose_response_model.dart
 //
-// Modelo de respuesta del Servicio 3 — POST /api/v1/diagnose
+// Modelo de respuesta del Servicio 3 — POST /predict
 
 class DiagnoseResponseModel {
-  final String timestampDiagnostico;
-  final String archivoAnalizado;
-  final DiagnosePaciente paciente;
-  final String focoAuscultacion;
-  final DiagnoseResultadoIA resultadoIA;
-  final String recomendacion;
+  final String estado;
+  final double precision;
+  final double umbral;
+  final DiagnoseScores scores;
+  final DiagnoseLimpieza limpieza;
 
   const DiagnoseResponseModel({
-    required this.timestampDiagnostico,
-    required this.archivoAnalizado,
-    required this.paciente,
-    required this.focoAuscultacion,
-    required this.resultadoIA,
-    required this.recomendacion,
+    required this.estado,
+    required this.precision,
+    required this.umbral,
+    required this.scores,
+    required this.limpieza,
   });
 
   factory DiagnoseResponseModel.fromJson(Map<String, dynamic> json) {
     return DiagnoseResponseModel(
-      timestampDiagnostico: json['timestamp_diagnostico'] as String? ?? '',
-      archivoAnalizado: json['archivo_analizado'] as String? ?? '',
-      paciente: DiagnosePaciente.fromJson(
-          json['paciente'] as Map<String, dynamic>? ?? {}),
-      focoAuscultacion: json['foco_auscultacion'] as String? ?? '',
-      resultadoIA: DiagnoseResultadoIA.fromJson(
-          json['resultado_ia'] as Map<String, dynamic>? ?? {}),
-      recomendacion: json['recomendacion'] as String? ?? '',
+      estado: json['estado'] as String? ?? '',
+      precision: (json['precision'] as num?)?.toDouble() ?? 0.0,
+      umbral: (json['umbral'] as num?)?.toDouble() ?? 0.0,
+      scores: DiagnoseScores.fromJson(
+          json['scores'] as Map<String, dynamic>? ?? {}),
+      limpieza: DiagnoseLimpieza.fromJson(
+          json['limpieza'] as Map<String, dynamic>? ?? {}),
+    );
+  }
+
+  /// Helper: true si el estado es "normal"
+  bool get esNormal => estado.toLowerCase() == 'normal';
+}
+
+class DiagnoseScores {
+  final double anormal;
+  final double normal;
+
+  const DiagnoseScores({
+    required this.anormal,
+    required this.normal,
+  });
+
+  factory DiagnoseScores.fromJson(Map<String, dynamic> json) {
+    return DiagnoseScores(
+      anormal: (json['anormal'] as num?)?.toDouble() ?? 0.0,
+      normal: (json['normal'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
 
-class DiagnosePaciente {
-  final int edad;
-  final String genero;
-  final double pesoKg;
-  final double alturaCm;
+class DiagnoseLimpieza {
+  final int sampleRate;
+  final double durationSeconds;
 
-  const DiagnosePaciente({
-    required this.edad,
-    required this.genero,
-    required this.pesoKg,
-    required this.alturaCm,
+  const DiagnoseLimpieza({
+    required this.sampleRate,
+    required this.durationSeconds,
   });
 
-  factory DiagnosePaciente.fromJson(Map<String, dynamic> json) {
-    return DiagnosePaciente(
-      edad: json['edad'] as int? ?? 0,
-      genero: json['genero'] as String? ?? '',
-      pesoKg: (json['peso_kg'] as num?)?.toDouble() ?? 0.0,
-      alturaCm: (json['altura_cm'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-}
-
-class DiagnoseResultadoIA {
-  final String diagnostico;
-  final bool tieneValvulopatia;
-  final double probabilidadAnomalia;
-  final double probabilidadNormal;
-  final String confianza;
-  final int modeloEntrenadoCon;
-
-  const DiagnoseResultadoIA({
-    required this.diagnostico,
-    required this.tieneValvulopatia,
-    required this.probabilidadAnomalia,
-    required this.probabilidadNormal,
-    required this.confianza,
-    required this.modeloEntrenadoCon,
-  });
-
-  factory DiagnoseResultadoIA.fromJson(Map<String, dynamic> json) {
-    return DiagnoseResultadoIA(
-      diagnostico: json['diagnostico'] as String? ?? '',
-      tieneValvulopatia: json['tiene_valvulopatia'] as bool? ?? false,
-      probabilidadAnomalia:
-          (json['probabilidad_anomalia'] as num?)?.toDouble() ?? 0.0,
-      probabilidadNormal:
-          (json['probabilidad_normal'] as num?)?.toDouble() ?? 0.0,
-      confianza: json['confianza'] as String? ?? '',
-      modeloEntrenadoCon: json['modelo_entrenado_con'] as int? ?? 0,
+  factory DiagnoseLimpieza.fromJson(Map<String, dynamic> json) {
+    return DiagnoseLimpieza(
+      sampleRate: json['sample_rate'] as int? ?? 0,
+      durationSeconds: (json['duration_seconds'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

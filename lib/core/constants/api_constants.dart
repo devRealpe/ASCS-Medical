@@ -4,24 +4,24 @@
 class ApiConstants {
   ApiConstants._();
 
-  /// URL base del servidor — cambiar por la IP real en producción
-  static const String baseUrl = 'http://35.231.170.12:3000';
+  /// URL base del servidor principal (auth, config, diagnósticos)
+  static const String baseUrl = 'https://cardioai.app';
 
   /// URL base del servidor de entrenamiento
   static const String trainBaseUrl = 'http://35.231.170.12:5000';
 
-  /// URL base del servicio 2 — muestras de entrenamiento
-  static const String service2BaseUrl = 'http://35.231.170.12:5000';
+  /// URL base del servicio 2 — ingesta de archivos diagnósticos
+  static const String service2BaseUrl = 'http://34.138.217.86:3002';
 
-  /// URL base del servicio 3 — diagnóstico IA
-  static const String service3BaseUrl = 'http://35.231.170.12:5000';
+  /// URL base del servicio 3 — predicción IA
+  static const String service3BaseUrl = 'http://34.138.217.86:3004';
 
   // ── Endpoint de entrenamiento ───────────────────────────────────────────
   static const String train = '/train';
 
   // ── Endpoints de servicios v1 ───────────────────────────────────────────
-  static const String trainSample = '/api/v1/train/sample';
-  static const String diagnose = '/api/v1/diagnose';
+  static const String ingest = '/ingest';
+  static const String predict = '/predict';
 
   // ── Endpoints de autenticación ──────────────────────────────────────────
   static const String register = '/api/auth/register';

@@ -49,11 +49,6 @@ class ConfigRepositoryImpl implements ConfigRepository {
           final consultorios = config.consultorios
               .where((c) => c.codigoHospital == codigoHospital)
               .toList();
-          if (consultorios.isEmpty) {
-            return Left(
-              CacheFailure('No se encontraron consultorios para esta institución'),
-            );
-          }
           return Right(consultorios);
         },
       );

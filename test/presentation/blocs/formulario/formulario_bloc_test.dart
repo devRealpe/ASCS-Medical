@@ -201,6 +201,7 @@ class MockDiagnosticoRemoteDataSource implements DiagnosticoRemoteDataSource {
     required String genero,
     required double altura,
     required double peso,
+    double? precision,
     required String diagnosticoTexto,
     required int focoId,
     int? categoriaAnomaliaId,
@@ -264,24 +265,17 @@ DiagnosticarAudioEvent _crearEventoDiagnostico(File zipFile) {
 
 /// Respuesta IA de prueba con diagnóstico anormal y valvulopatía.
 const DiagnoseResponseModel _diagnoseResponseAnormal = DiagnoseResponseModel(
-  timestampDiagnostico: '2025-01-15T10:30:00Z',
-  archivoAnalizado: 'test_audio.wav',
-  paciente: DiagnosePaciente(
-    edad: 35,
-    genero: 'M',
-    pesoKg: 70.0,
-    alturaCm: 175.0,
+  estado: 'anormal',
+  precision: 0.87,
+  umbral: 0.4,
+  scores: DiagnoseScores(
+    anormal: 0.87,
+    normal: 0.13,
   ),
-  focoAuscultacion: 'Aórtico',
-  resultadoIA: DiagnoseResultadoIA(
-    diagnostico: 'Anormal',
-    tieneValvulopatia: true,
-    probabilidadAnomalia: 0.87,
-    probabilidadNormal: 0.13,
-    confianza: 'Alta',
-    modeloEntrenadoCon: 1500,
+  limpieza: DiagnoseLimpieza(
+    sampleRate: 2000,
+    durationSeconds: 15.0,
   ),
-  recomendacion: 'Se recomienda evaluación cardiológica especializada',
 );
 
 // ============================================================================
@@ -481,19 +475,19 @@ void main() {
                 'CP00201: Debe emitir DiagnosticoIARecibido con resultado IA');
         final iaState = state as DiagnosticoIARecibido;
         // Verificar clasificación
-        expect(iaState.resultado.resultadoIA.diagnostico, 'Anormal',
-            reason: 'CP00201: La clasificación debe ser Anormal');
-        // Verificar valvulopatía
-        expect(iaState.resultado.resultadoIA.tieneValvulopatia, isTrue,
+        expect(iaState.resultado.estado, 'anormal',
+            reason: 'CP00201: La clasificación debe ser anormal');
+        // Verificar que no es normal (valvulopatía)
+        expect(iaState.resultado.esNormal, isFalse,
             reason: 'CP00201: Debe indicar presencia de valvulopatía');
-        // Verificar probabilidades
-        expect(iaState.resultado.resultadoIA.probabilidadAnomalia, 0.87,
-            reason: 'CP00201: Probabilidad de anomalía debe ser 0.87');
-        expect(iaState.resultado.resultadoIA.probabilidadNormal, 0.13,
-            reason: 'CP00201: Probabilidad normal debe ser 0.13');
-        // Verificar confianza
-        expect(iaState.resultado.resultadoIA.confianza, 'Alta',
-            reason: 'CP00201: El nivel de confianza debe ser Alta');
+        // Verificar scores
+        expect(iaState.resultado.scores.anormal, 0.87,
+            reason: 'CP00201: Score de anomalía debe ser 0.87');
+        expect(iaState.resultado.scores.normal, 0.13,
+            reason: 'CP00201: Score normal debe ser 0.13');
+        // Verificar precisión
+        expect(iaState.resultado.precision, 0.87,
+            reason: 'CP00201: La precisión debe ser 0.87');
       },
     );
 
@@ -534,19 +528,19 @@ void main() {
             reason:
                 'CP00202: Debe emitir DiagnosticoIARecibido con resultado IA');
         final iaState = bloc.state as DiagnosticoIARecibido;
-        // Verificar que el resultado contiene datos del paciente asociados
-        expect(iaState.resultado.paciente.edad, 35,
-            reason: 'CP00202: La edad del paciente debe coincidir');
-        expect(iaState.resultado.paciente.genero, 'M',
-            reason: 'CP00202: El género del paciente debe coincidir');
-        expect(iaState.resultado.paciente.pesoKg, 70.0,
-            reason: 'CP00202: El peso del paciente debe coincidir');
-        expect(iaState.resultado.paciente.alturaCm, 175.0,
-            reason: 'CP00202: La altura del paciente debe coincidir');
+        // Verificar scores y estado
+        expect(iaState.resultado.estado, 'anormal',
+            reason: 'CP00202: El estado debe ser anormal');
+        expect(iaState.resultado.scores.anormal, 0.87,
+            reason: 'CP00202: Score anormal debe coincidir');
+        expect(iaState.resultado.scores.normal, 0.13,
+            reason: 'CP00202: Score normal debe coincidir');
+        expect(iaState.resultado.umbral, 0.4,
+            reason: 'CP00202: El umbral debe coincidir');
         // Verificar que el diagnóstico tiene la clasificación asociada
-        expect(iaState.resultado.resultadoIA.diagnostico, 'Anormal',
+        expect(iaState.resultado.estado, 'anormal',
             reason: 'CP00202: El diagnóstico debe estar asociado al resultado');
-        expect(iaState.resultado.resultadoIA.tieneValvulopatia, isTrue,
+        expect(iaState.resultado.esNormal, isFalse,
             reason:
                 'CP00202: La valvulopatía debe estar asociada al resultado');
       },

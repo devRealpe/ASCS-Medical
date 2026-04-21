@@ -105,22 +105,30 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
     if (configState is ConfigError) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: MedicalColors.errorRed),
-            const SizedBox(height: 16),
-            Text('Error al cargar configuración',
-                style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(configState.message),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () =>
-                  context.read<ConfigBloc>().add(CargarConfiguracionEvent()),
-              child: const Text('Reintentar'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.cloud_off, size: 64, color: MedicalColors.errorRed),
+              const SizedBox(height: 16),
+              Text('¡No eres tú, somos nosotros!',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'No pudimos cargar la configuración.\nPor favor verifica tu conexión e intenta de nuevo.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    context.read<ConfigBloc>().add(CargarConfiguracionEvent()),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -301,15 +309,18 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
 
     final config = configState.config;
     final hospitalEntity = config.getHospitalPorNombre(_hospital!);
-    final consultorioEntity = config.getConsultorioPorNombre(_consultorio!);
+    final consultorioEntity = _consultorio != null
+        ? config.getConsultorioPorNombre(_consultorio!)
+        : null;
     final focoEntity = config.getFocoPorNombre(_focoAuscultacion!);
 
-    if (hospitalEntity == null ||
-        consultorioEntity == null ||
-        focoEntity == null) {
+    if (hospitalEntity == null || focoEntity == null) {
       _showError('Error al obtener configuración');
       return;
     }
+
+    final consultorioNombre = consultorioEntity?.nombre ?? 'No aplica';
+    final consultorioCodigo = consultorioEntity?.codigo ?? '00';
 
     String? codigoCat;
     int? categoriaAnomaliaId;
@@ -336,8 +347,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               fechaNacimiento: _selectedDate!,
               hospital: _hospital!,
               codigoHospital: hospitalEntity.codigo,
-              consultorio: _consultorio!,
-              codigoConsultorio: consultorioEntity.codigo,
+              consultorio: consultorioNombre,
+              codigoConsultorio: consultorioCodigo,
               estado: _estado!,
               focoAuscultacion: _focoAuscultacion!,
               codigoFoco: focoEntity.codigo,
@@ -362,8 +373,8 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               fechaNacimiento: _selectedDate!,
               hospital: _hospital!,
               codigoHospital: hospitalEntity.codigo,
-              consultorio: _consultorio!,
-              codigoConsultorio: consultorioEntity.codigo,
+              consultorio: consultorioNombre,
+              codigoConsultorio: consultorioCodigo,
               focoAuscultacion: _focoAuscultacion!,
               codigoFoco: focoEntity.codigo,
               observaciones: _observaciones,
@@ -392,7 +403,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
       _resetForm();
       context.read<FormularioBloc>().add(ResetFormularioEvent());
     } else if (state is DiagnosticoIARecibido) {
-      _showDiagnosticoResultDialog(state.resultado);
+      _showDiagnosticoResultDialog(state.resultado, state.guardadoEnServidor);
       context.read<FormularioBloc>().add(ResetFormularioEvent());
     } else if (state is FormularioError) {
       _showError(state.mensaje);
@@ -455,12 +466,12 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
     );
   }
 
-  void _showDiagnosticoResultDialog(DiagnoseResponseModel resultado) {
+  void _showDiagnosticoResultDialog(
+      DiagnoseResponseModel resultado, bool guardadoEnServidor) {
     if (!mounted) return;
-    final ia = resultado.resultadoIA;
-    final colorDiag = ia.tieneValvulopatia
-        ? MedicalColors.errorRed
-        : MedicalColors.successGreen;
+    final esAnormal = !resultado.esNormal;
+    final colorDiag =
+        esAnormal ? MedicalColors.errorRed : MedicalColors.successGreen;
 
     showDialog(
       context: context,
@@ -491,7 +502,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                 child: Column(
                   children: [
                     Icon(
-                      ia.tieneValvulopatia
+                      esAnormal
                           ? Icons.warning_amber_rounded
                           : Icons.check_circle_outline,
                       color: colorDiag,
@@ -499,7 +510,7 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      ia.diagnostico,
+                      resultado.estado.toUpperCase(),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -512,31 +523,49 @@ class _FormularioPageViewState extends State<_FormularioPageView> {
               ),
               const SizedBox(height: 16),
 
-              // Probabilidades
-              _diagRow('Prob. anomalía',
-                  '${(ia.probabilidadAnomalia * 100).toStringAsFixed(1)}%'),
-              _diagRow('Prob. normal',
-                  '${(ia.probabilidadNormal * 100).toStringAsFixed(1)}%'),
-              _diagRow('Confianza', ia.confianza),
+              // Scores y precisión
+              _diagRow('Precisión',
+                  '${(resultado.precision * 100).toStringAsFixed(1)}%'),
+              _diagRow('Score anomalía',
+                  '${(resultado.scores.anormal * 100).toStringAsFixed(1)}%'),
+              _diagRow('Score normal',
+                  '${(resultado.scores.normal * 100).toStringAsFixed(1)}%'),
+              _diagRow('Umbral', resultado.umbral.toStringAsFixed(2)),
               const Divider(height: 24),
 
-              // Info adicional
-              _diagRow('Foco', resultado.focoAuscultacion),
-              _diagRow('Archivo', resultado.archivoAnalizado),
-              if (resultado.recomendacion.isNotEmpty)
-                _diagRow('Recomendación', resultado.recomendacion),
-              if (ia.modeloEntrenadoCon > 0)
-                _diagRow('Modelo', '${ia.modeloEntrenadoCon} muestras'),
+              // Info de limpieza del audio
+              _diagRow('Sample rate', '${resultado.limpieza.sampleRate} Hz'),
+              _diagRow('Duración',
+                  '${resultado.limpieza.durationSeconds.toStringAsFixed(1)} s'),
 
-              // Paciente info
               const Divider(height: 24),
-              const Text('Paciente:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              _diagRow('Edad', '${resultado.paciente.edad} años'),
-              _diagRow('Género', resultado.paciente.genero),
-              _diagRow('Peso', '${resultado.paciente.pesoKg} kg'),
-              _diagRow('Altura', '${resultado.paciente.alturaCm} cm'),
+
+              // Estado de guardado en servidor
+              Row(
+                children: [
+                  Icon(
+                    guardadoEnServidor ? Icons.cloud_done : Icons.cloud_off,
+                    size: 18,
+                    color: guardadoEnServidor
+                        ? MedicalColors.successGreen
+                        : MedicalColors.errorRed,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      guardadoEnServidor
+                          ? 'Diagnóstico guardado en el servidor'
+                          : 'No se pudo guardar en el servidor',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: guardadoEnServidor
+                            ? MedicalColors.successGreen
+                            : MedicalColors.errorRed,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

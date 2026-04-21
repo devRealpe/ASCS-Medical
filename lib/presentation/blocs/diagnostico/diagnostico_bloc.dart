@@ -1,7 +1,10 @@
 // lib/presentation/blocs/diagnostico/diagnostico_bloc.dart
 
+import 'dart:developer' as developer;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../core/errors/user_friendly_error_mapper.dart';
 import '../../../data/datasources/remote/diagnostico_remote_datasource.dart';
 import '../../../data/models/diagnostico/diagnostico_model.dart';
 import 'diagnostico_event.dart';
@@ -24,12 +27,15 @@ class DiagnosticoBloc extends Bloc<DiagnosticoEvent, DiagnosticoState> {
       final grupos = await dataSource.obtenerPorCreador(event.usuarioCreaId);
       emit(DiagnosticoLoaded(grupos: grupos));
     } on NetworkException catch (e) {
-      emit(
-          DiagnosticoError('Sin conexión al servidor.\nDetalle: ${e.message}'));
+      emit(DiagnosticoError(UserFriendlyErrorMapper.fromError(e)));
     } on ServerException catch (e) {
-      emit(DiagnosticoError(e.message));
-    } catch (e) {
-      emit(DiagnosticoError('Error inesperado: $e'));
+      emit(DiagnosticoError(UserFriendlyErrorMapper.fromError(e)));
+    } catch (e, stack) {
+      developer.log('Error inesperado al cargar diagnósticos: $e',
+          name: 'DIAGNOSTICO', stackTrace: stack);
+      emit(const DiagnosticoError(
+        UserFriendlyErrorMapper.unexpectedErrorMessage,
+      ));
     }
   }
 
@@ -71,12 +77,15 @@ class DiagnosticoBloc extends Bloc<DiagnosticoEvent, DiagnosticoState> {
         grupos: updatedGroups,
       ));
     } on NetworkException catch (e) {
-      emit(
-          DiagnosticoError('Sin conexión al servidor.\nDetalle: ${e.message}'));
+      emit(DiagnosticoError(UserFriendlyErrorMapper.fromError(e)));
     } on ServerException catch (e) {
-      emit(DiagnosticoError(e.message));
-    } catch (e) {
-      emit(DiagnosticoError('Error inesperado: $e'));
+      emit(DiagnosticoError(UserFriendlyErrorMapper.fromError(e)));
+    } catch (e, stack) {
+      developer.log('Error inesperado al confirmar valvulopatía: $e',
+          name: 'DIAGNOSTICO', stackTrace: stack);
+      emit(const DiagnosticoError(
+        UserFriendlyErrorMapper.unexpectedErrorMessage,
+      ));
     }
   }
 

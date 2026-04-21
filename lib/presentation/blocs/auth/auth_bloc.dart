@@ -2,6 +2,7 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../core/errors/user_friendly_error_mapper.dart';
 import '../../../core/services/session_service.dart';
 import '../../../data/datasources/remote/auth_remote_datasource.dart';
 import 'auth_event.dart';
@@ -31,15 +32,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(AuthRegistradoExitosamente(usuario));
     } on NetworkException catch (e) {
-      emit(AuthError(
-        'Sin conexión al servidor.\n'
-        'Verifica que el servidor esté encendido y tu red funcione.\n\n'
-        'Detalle: ${e.message}',
-      ));
+      emit(AuthError(UserFriendlyErrorMapper.fromError(e)));
     } on ServerException catch (e) {
-      emit(AuthError(e.message));
-    } catch (e) {
-      emit(AuthError('Error inesperado: $e'));
+      emit(AuthError(UserFriendlyErrorMapper.fromError(e)));
+    } catch (_) {
+      emit(const AuthError(UserFriendlyErrorMapper.unexpectedErrorMessage));
     }
   }
 
@@ -57,15 +54,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await SessionService.instance.save(usuario);
       emit(AuthLogueadoExitosamente(usuario));
     } on NetworkException catch (e) {
-      emit(AuthError(
-        'Sin conexión al servidor.\n'
-        'Verifica que el servidor esté encendido y tu red funcione.\n\n'
-        'Detalle: ${e.message}',
-      ));
+      emit(AuthError(UserFriendlyErrorMapper.fromError(e)));
     } on ServerException catch (e) {
-      emit(AuthError(e.message));
-    } catch (e) {
-      emit(AuthError('Error inesperado: $e'));
+      emit(AuthError(UserFriendlyErrorMapper.fromError(e)));
+    } catch (_) {
+      emit(const AuthError(UserFriendlyErrorMapper.unexpectedErrorMessage));
     }
   }
 

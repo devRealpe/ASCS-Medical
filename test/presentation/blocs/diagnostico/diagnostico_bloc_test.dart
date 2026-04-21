@@ -64,6 +64,7 @@ class MockDiagnosticoRemoteDataSource implements DiagnosticoRemoteDataSource {
     required String genero,
     required double altura,
     required double peso,
+    double? precision,
     required String diagnosticoTexto,
     required int focoId,
     int? categoriaAnomaliaId,

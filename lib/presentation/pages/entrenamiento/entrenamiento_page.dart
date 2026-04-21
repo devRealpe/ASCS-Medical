@@ -147,8 +147,6 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
         key: _formKey,
         child: Column(
           children: [
-            _buildInfoBanner(),
-            const SizedBox(height: 20),
             _buildPatientCard(),
             const SizedBox(height: 20),
             _buildLocationCard(configState),
@@ -161,54 +159,6 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Banner informativo ──────────────────────────────────────────────────
-
-  Widget _buildInfoBanner() {
-    final accent = context.accent;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            accent.withAlpha(25),
-            accent.withAlpha(12),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withAlpha(75)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.withAlpha(38),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.psychology, color: accent, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Entrenamiento del modelo',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Envía un audio cardíaco .wav con datos del paciente para entrenar el modelo de clasificación.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -282,7 +232,9 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
               items: consultorios.map((c) => c.nombre as String).toList(),
               value: _consultorioSeleccionado,
               onChanged: (v) => setState(() => _consultorioSeleccionado = v),
-              validator: (v) => v == null ? 'Selecciona un consultorio' : null,
+              validator: consultorios.isNotEmpty
+                  ? (v) => v == null ? 'Selecciona un consultorio' : null
+                  : null,
             ),
           ],
         ),
@@ -552,8 +504,8 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
         prefixIcon: Icon(Icons.wc, color: context.hint),
       ),
       items: const [
-        DropdownMenuItem(value: 'MASCULINO', child: Text('Masculino')),
-        DropdownMenuItem(value: 'FEMENINO', child: Text('Femenino')),
+        DropdownMenuItem(value: 'M', child: Text('Masculino')),
+        DropdownMenuItem(value: 'F', child: Text('Femenino')),
       ],
       onChanged: (v) => setState(() => _genero = v),
       validator: (v) => v == null ? 'Selecciona el género' : null,
@@ -764,12 +716,9 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
       return;
     }
 
-    final consultorio =
-        configState.config.getConsultorioPorNombre(_consultorioSeleccionado!);
-    if (consultorio == null) {
-      _showError('Consultorio no válido.');
-      return;
-    }
+    final consultorio = _consultorioSeleccionado != null
+        ? configState.config.getConsultorioPorNombre(_consultorioSeleccionado!)
+        : null;
 
     final edad = DateTime.now().difference(_fechaNacimiento!).inDays ~/ 365;
 
@@ -792,8 +741,8 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
             codigoFoco: foco.codigo,
             hospital: hospital.nombre,
             codigoHospital: hospital.codigo,
-            consultorio: consultorio.nombre,
-            codigoConsultorio: consultorio.codigo,
+            consultorio: consultorio?.nombre ?? 'No aplica',
+            codigoConsultorio: consultorio?.codigo ?? '00',
             institucionId: hospital.id,
             focoId: foco.id,
             categoriaAnomaliaIds: catIds,
@@ -811,7 +760,7 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
 
   void _showSuccessDialog(EntrenamientoExitoso state) {
     final r = state.response;
-    final ia = r.resultadoIA;
+    final esAnormal = !r.esNormal;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -840,16 +789,15 @@ class _EntrenamientoPageViewState extends State<_EntrenamientoPageView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildResultRow('Diagnóstico', ia.diagnostico),
-            _buildResultRow('Confianza', ia.confianza),
-            _buildResultRow('Prob. Anomalía',
-                '${(ia.probabilidadAnomalia * 100).toStringAsFixed(1)}%'),
-            _buildResultRow('Prob. Normal',
-                '${(ia.probabilidadNormal * 100).toStringAsFixed(1)}%'),
-            _buildResultRow('Valvulopatía', ia.tieneValvulopatia ? 'Sí' : 'No'),
-            _buildResultRow('Foco', r.focoAuscultacion),
-            if (r.recomendacion.isNotEmpty)
-              _buildResultRow('Recomendación', r.recomendacion),
+            _buildResultRow('Estado', r.estado.toUpperCase()),
+            _buildResultRow(
+                'Precisión', '${(r.precision * 100).toStringAsFixed(1)}%'),
+            _buildResultRow('Score Anomalía',
+                '${(r.scores.anormal * 100).toStringAsFixed(1)}%'),
+            _buildResultRow('Score Normal',
+                '${(r.scores.normal * 100).toStringAsFixed(1)}%'),
+            _buildResultRow('Umbral', r.umbral.toStringAsFixed(2)),
+            _buildResultRow('Anormal', esAnormal ? 'Sí' : 'No'),
             const Divider(height: 24),
             Row(
               children: [

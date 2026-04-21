@@ -1,5 +1,6 @@
 // lib/presentation/blocs/config/config_bloc.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/errors/user_friendly_error_mapper.dart';
 import '../../../domain/repositories/config_repository.dart';
 import '../../../domain/usecases/config/obtener_consultorios_por_hospital_usecase.dart';
 import 'config_event.dart';
@@ -26,7 +27,14 @@ class ConfigBloc extends Bloc<ConfigEvent, ConfigState> {
     final result = await configRepository.obtenerConfiguracion();
 
     result.fold(
-      (failure) => emit(ConfigError(failure.message)),
+      (failure) => emit(
+        ConfigError(
+          UserFriendlyErrorMapper.fromFailure(
+            failure,
+            fallback: UserFriendlyErrorMapper.configLoadMessage,
+          ),
+        ),
+      ),
       (config) => emit(ConfigLoaded(config: config)),
     );
   }
@@ -42,7 +50,14 @@ class ConfigBloc extends Bloc<ConfigEvent, ConfigState> {
       final result = await obtenerConsultoriosUseCase(event.codigoHospital);
 
       result.fold(
-        (failure) => emit(ConfigError(failure.message)),
+        (failure) => emit(
+          ConfigError(
+            UserFriendlyErrorMapper.fromFailure(
+              failure,
+              fallback: UserFriendlyErrorMapper.configLoadMessage,
+            ),
+          ),
+        ),
         (consultorios) => emit(
           currentState.copyWith(consultoriosFiltrados: consultorios),
         ),
